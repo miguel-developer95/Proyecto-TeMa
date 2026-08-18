@@ -1,4 +1,4 @@
-* {
+{
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -24,8 +24,8 @@ body {
 }
 
 .shop-logo {
-    width: 80px;
-    height: 80px;
+    width: 150px;
+    height: 150px;
     object-fit: contain;
     margin-bottom: 4px;
 }
@@ -33,7 +33,7 @@ body {
 .brand {
     font-family: 'Brush Script MT', cursive;
     font-size: 32px;
-    color: #e63c82;
+    color: #e63c82; 
     line-height: 1.1;
 }
 
@@ -45,7 +45,7 @@ body {
 
 .tagline {
     font-size: 10px;
-    letter-spacing: 1.5px;
+    letter-spacing: 1.0px;
     color: #999;
     margin: 6px 0 20px;
 }
@@ -98,7 +98,7 @@ body {
 .forgot-link {
     display: block;
     text-align: center;
-    font-size: 12px;
+    font-size: 15px;
     color: #e63c82;
     text-decoration: none;
     margin-bottom: 20px;
