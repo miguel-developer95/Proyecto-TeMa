@@ -2,22 +2,61 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Iniciar Sesión</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tentaciones Marlly - Iniciar Sesión</title>
+    <link rel="stylesheet" href="/PHP---Tentaciones-Marlly/public/index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
-    <h1>Iniciar Sesión</h1>
-    <form action="index.php" method="POST">
-        <input type="hidden" name="action" value="login">
-        <label for="username">Usuario:</label>
-        <input type="text" name="username" id="username" required>
-        <br>
-        <label for="password">Contraseña:</label>
-        <input type="password" name="password" id="password" required>
-        <br>
-        <button type="submit">Iniciar Sesión</button>
-    </form>
 
-    <hr>
-    <a href="view/register.php">Registrarse</a>
+    <div class="login-wrapper">
+        <div class="login-card">
+
+            <img src="/PHP---Tentaciones-Marlly/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
+
+            <p class="tagline">MINI TIENDA DE CONSUMO DIARIO</p>
+
+            <h2 class="welcome">Bienvenido</h2>
+            <p class="subtitle">Ingresa para continuar</p>
+
+            <!-- Formulario configurado para el controlador MVC -->
+            <form action="index.php" method="POST">
+                <input type="hidden" name="action" value="login">
+
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="username" name="username" placeholder="Usuario o Correo" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="password" name="password" placeholder="Contraseña" required>
+                    <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
+                </div>
+
+                <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+
+                <button type="submit">Iniciar Sesión</button>
+            </form>
+
+            <p class="register-link" style="margin-top: 15px; font-size: 14px; color: #888;">
+                ¿No tienes cuenta? <a href="view/register.php" style="color: #e63c82; text-decoration: none; font-weight: 600;">Regístrate</a>
+            </p>
+
+        </div>
+    </div>
+
+    <script>
+        const toggleEye = document.getElementById('toggleEye');
+        const password = document.getElementById('password');
+
+        toggleEye.addEventListener('click', () => {
+            const isPassword = password.type === 'password';
+            password.type = isPassword ? 'text' : 'password';
+            toggleEye.classList.toggle('fa-eye');
+            toggleEye.classList.toggle('fa-eye-slash');
+        });
+    </script>
+
 </body>
 </html>
