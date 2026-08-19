@@ -1,7 +1,7 @@
 <?php
 // Carpeta: controller
 // Archivo: UsuarioController.php
-require_once "model/Usuario.php";
+require_once "model/usuario.php";
 
 class UsuarioController {
     private $usuarioModel;
