@@ -1,6 +1,6 @@
 <?php
 // Archivo: index.php
-require_once "controller/UsuarioController.php";
+require_once "controller/usuario.controller.php";
 
 session_start();
 $controller = new UsuarioController();
