@@ -1,83 +1,118 @@
 <?php
-// model/metodos_pago.php
-require_once __DIR__ . '/../config/conexion.php';
+/**
+ * model/metodos_pago.php
+ * Sistema de Registro e Inventario Ke-rico - Tentaciones Marlly
+ *
+ * Módulo: Ventas -> Métodos de pago
+ * Cubre: RF 5.3 (registro de pago en efectivo o transferencia digital,
+ *        indicando la empresa cuando aplica: Nequi, Daviplata, Bancolombia, etc.)
+ *
+ * Patrón: MVC - Capa Modelo (acceso a datos con PDO)
+ */
 
-class MetodoPago
+require_once __DIR__ . '/conexion.php';
+
+class MetodosPago
 {
-    private $db;
+    private PDO $pdo;
 
     public function __construct()
     {
-        $this->db = (new Conexion())->conn;
+        global $pdo;
+        $this->pdo = $pdo;
     }
 
-    // Registrar un método de pago
-    public function registrar($tipo, $empresa = null)
+    /**
+     * Registra un nuevo método de pago (ej: Efectivo, Transferencia - Nequi).
+     *
+     * @param string      $nombreMetodo 'efectivo' | 'transferencia'
+     * @param string|null $empresa      Nombre de la entidad si es transferencia (ej: 'Nequi', 'Daviplata')
+     */
+    public function registrarMetodoPago(string $nombreMetodo, ?string $empresa = null): int
     {
-        try {
-            $query = "INSERT INTO metodos_pago (tipo, empresa) VALUES (:tipo, :empresa)";
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(":tipo", $tipo);
-            $stmt->bindParam(":empresa", $empresa);
-            return $stmt->execute();
-        } catch (PDOException $e) {
-            if ($e->getCode() == 23000) {
-                return false; // Ejemplo: duplicado
-            }
-            throw $e;
-        }
+        $sql = "INSERT INTO METODOS_PAGO (nombre_metodo, empresa, estado)
+                VALUES (:nombreMetodo, :empresa, 'activo')";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':nombreMetodo' => $nombreMetodo,
+            ':empresa'      => $empresa,
+        ]);
+
+        return (int) $this->pdo->lastInsertId();
     }
 
-    // Obtener todos los métodos de pago
-    public function obtenerTodos()
+    /**
+     * Actualiza los datos de un método de pago existente.
+     */
+    public function actualizarMetodoPago(int $idMetodoPago, string $nombreMetodo, ?string $empresa, string $estado): bool
     {
-        $query = "SELECT id, tipo, empresa FROM metodos_pago ORDER BY id DESC";
-        $stmt = $this->db->prepare($query);
+        $sql = "UPDATE METODOS_PAGO
+                SET nombre_metodo = :nombreMetodo,
+                    empresa = :empresa,
+                    estado = :estado
+                WHERE id_metodo_pago = :idMetodoPago";
+
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':nombreMetodo'  => $nombreMetodo,
+            ':empresa'       => $empresa,
+            ':estado'        => $estado,
+            ':idMetodoPago'  => $idMetodoPago,
+        ]);
+    }
+
+    /**
+     * Desactiva (eliminación lógica) un método de pago.
+     */
+    public function desactivarMetodoPago(int $idMetodoPago): bool
+    {
+        $sql = "UPDATE METODOS_PAGO SET estado = 'inactivo' WHERE id_metodo_pago = :idMetodoPago";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([':idMetodoPago' => $idMetodoPago]);
+    }
+
+    /**
+     * Lista todos los métodos de pago activos, para mostrarlos como opciones
+     * en el módulo de Ventas (RF 5.3).
+     */
+    public function listarMetodosPagoActivos(): array
+    {
+        $sql = "SELECT id_metodo_pago, nombre_metodo, empresa
+                FROM METODOS_PAGO
+                WHERE estado = 'activo'
+                ORDER BY nombre_metodo ASC";
+
+        $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
+
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Obtener método de pago por ID
-    public function obtenerPorId($id)
+    /**
+     * Obtiene un método de pago por su ID.
+     */
+    public function obtenerPorId(int $idMetodoPago): ?array
     {
-        $query = "SELECT id, tipo, empresa FROM metodos_pago WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(":id", $id);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $sql = "SELECT * FROM METODOS_PAGO WHERE id_metodo_pago = :idMetodoPago";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':idMetodoPago' => $idMetodoPago]);
+
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $resultado ?: null;
     }
 
-    // Actualizar método de pago
-    public function actualizar($id, $tipo, $empresa = null)
+    /**
+     * Calcula el cambio (vueltas) a entregar cuando el pago es en efectivo.
+     * RI 5.3: "el valor recibido y el cálculo automático del cambio (vueltas)".
+     *
+     * @param float $valorRecibido
+     * @param float $totalVenta
+     * @return float Cambio a entregar (0 si el pago es exacto o digital).
+     */
+    public function calcularCambio(float $valorRecibido, float $totalVenta): float
     {
-        try {
-            $query = "UPDATE metodos_pago SET tipo = :tipo, empresa = :empresa WHERE id = :id";
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(":tipo", $tipo);
-            $stmt->bindParam(":empresa", $empresa);
-            $stmt->bindParam(":id", $id);
-            return $stmt->execute();
-        } catch (PDOException $e) {
-            return false;
-        }
-    }
-
-    // Eliminar método de pago
-    public function eliminar($id)
-    {
-        $query = "DELETE FROM metodos_pago WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(":id", $id);
-        return $stmt->execute();
-    }
-
-    // Contar métodos de pago registrados
-    public function contarMetodos()
-    {
-        $query = "SELECT COUNT(*) as total FROM metodos_pago";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'];
+        $cambio = $valorRecibido - $totalVenta;
+        return $cambio > 0 ? round($cambio, 2) : 0.0;
     }
 }
