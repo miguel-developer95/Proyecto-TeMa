@@ -1,0 +1,31 @@
+Login: Miguel
+	RF 1.1	El sistema contará con un botón para registrarse el cuál lo redirigirá a un formulario que pedirá sus datos personales los cuales serán guardados para poder registrarse.
+	RF 1.2	El sistema deberá crear un nombre de usuario único de forma automática por cada usuario al momento de completar el registro.
+	RF 1.3	El sistema gestionará el acceso a los usuarios con sus respectivas credenciales (nombre de usuario/correo electrónico y una contraseña única).
+	RF 1.4	El sistema deberá redirigir al usuario a su interfaz correspondiente según su rol.
+	RF 1.5	El sistema ofrecerá una opción para restablecer la contraseña.
+	RF 1.6	El sistema deberá permitir al usuario cerrar su sesión de forma manual en cualquier momento.
+	RF 1.7	El sistema deberá bloquear la cuenta temporalmente en caso de que un tercero intente adivinar la clave de alguno de los usuarios (administrador y/o vendedor).
+	RF 1.8	El sistema deberá cerrar automáticamente la sesión del usuario cuando no detecte actividad durante 30 minutos consecutivos, con el fin de proteger la información y prevenir accesos no autorizados.
+Administración: Esteban
+	RF 2.1	El sistema generará informes que muestren la ganancia real (Precio Venta - Precio Compra) por producto o categoría.
+	RF 2.2	El sistema identificará los productos con mayor rotación (los más vendidos) y los que no se mueven.
+	RF 2.3	El sistema permitirá definir qué acciones puede hacer un "Vendedor" (solo ventas) frente a un "Administrador" (todo).
+Inventario: Sara 
+	RF 3.1	El sistema permitirá registrar nuevos productos en el inventario con su información correspondiente.
+	RF 3.2	El sistema permitirá modificar la información de los productos registrados.
+	RF 3.3	El sistema permitirá descontinuar productos que ya no se encuentren disponibles.
+	RF 3.4	El sistema permitirá visualizar el listado de productos y su cantidad disponible.
+	RF 3.5	El sistema deberá avisar que el stock de cada producto se está agotando.
+Compras: Xiomara
+	RF 4.1	El sistema permitirá crear un registro de compras. 
+	RF 4.2	El sistema permitirá crear un registro de proveedores.
+	RF 4.3	El sistema permitirá consultar el historial de Compras.
+	RF 4.4	El sistema permitirá al usuario crear modificación de las Compras.
+Ventas:Xiomara
+	RF 5.1	El sistema permitirá procesar una venta seleccionando productos mediante escaneo de código de barras o búsqueda manual.
+	RF 5.2	Se debe actualizar el campo cantidad en stock del Módulo de Inventario y registrar el movimiento de salida del producto vinculado al ID de la venta para trazabilidad.
+	RF 5.3	El sistema permitirá registrar el pago en efectivo o transferencia digital.
+	RF 5.4	El sistema permitirá pausar una venta en curso para atender a otro cliente y recuperarla después sin perder los datos cargados.
+	RF 5.5	El sistema permitirá cancelar una venta realizada, exigiendo un motivo y reintegrando los productos al stock.
+	RF 5.6	El sistema deberá generar un recibo electrónico por cada venta realizada
