@@ -1,8 +1,30 @@
 
 <?php
- 
-require_once __DIR__ . '/../config/tentaciones_marlly.php';
- 
+
+if (!class_exists('Database', false)) {
+    $databaseFiles = [
+        __DIR__ . '/../config/tentaciones_marlly.php',
+        __DIR__ . '/../config/database.php',
+    ];
+
+    foreach ($databaseFiles as $file) {
+        if (file_exists($file)) {
+            require_once $file;
+            break;
+        }
+    }
+}
+
+if (!class_exists('Database', false)) {
+    class Database
+    {
+        public function getConnection(): PDO
+        {
+            throw new RuntimeException('Database class not found. Check the config file.');
+        }
+    }
+}
+
 class Compra
 {
     private PDO $conn;

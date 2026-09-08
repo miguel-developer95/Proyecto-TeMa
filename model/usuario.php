@@ -4,15 +4,20 @@ require_once __DIR__ . '/../config/conexion.php';
 
 class Usuario
 {
-    private $db;
+    /** @var PDO */
+    private PDO $db;
 
     public function __construct()
     {
         $this->db = (new Conexion())->conn;
     }
 
-    // Método para verificar el login (permite usuario o email)
-    public function login($username, $password)
+    /**
+     * Verify user login credentials (supports username or email).
+     * 
+     * @return array|false Returns user associative array if verified, false otherwise.
+     */
+    public function login(string $username, string $password)
     {
         $query = "SELECT * FROM usuarios WHERE username = :username OR email = :username";
         $stmt = $this->db->prepare($query);
@@ -27,8 +32,10 @@ class Usuario
         return false;
     }
 
-    // Método para registrar un usuario
-    public function registrar($username, $password, $email = null, $documento = null)
+    /**
+     * Register a new user record.
+     */
+    public function registrar(string $username, string $password, ?string $email = null, ?string $documento = null): bool
     {
         try {
             $hash = password_hash($password, PASSWORD_BCRYPT);
@@ -47,28 +54,35 @@ class Usuario
         }
     }
 
-    // Obtener el total de usuarios registrados
-    public function contarUsuarios()
+    /**
+     * Get total count of registered users.
+     */
+    public function contarUsuarios(): int
     {
         $query = "SELECT COUNT(*) as total FROM usuarios";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'];
+        return (int) ($result['total'] ?? 0);
     }
 
-    // Obtener todos los usuarios de la tabla de forma segura
-    public function obtenerTodos()
+    /**
+     * Fetch all users securely from the database.
+     */
+    public function obtenerTodos(): array
     {
-        // Se envuelve `No.Documento` en comillas invertidas para evitar el error de sintaxis de MariaDB
         $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento` FROM usuarios ORDER BY id DESC";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Obtener usuario por ID
-    public function obtenerPorId($id)
+    /**
+     * Fetch a specific user by ID.
+     * 
+     * @return array|false Returns user associative array if found, false otherwise.
+     */
+    public function obtenerPorId(int $id)
     {
         $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento` FROM usuarios WHERE id = :id";
         $stmt = $this->db->prepare($query);
@@ -77,8 +91,10 @@ class Usuario
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    // Actualizar usuario
-    public function actualizar($id, $username, $email = null, $documento = null, $password = null)
+    /**
+     * Update user details.
+     */
+    public function actualizar(int $id, string $username, ?string $email = null, ?string $documento = null, ?string $password = null): bool
     {
         try {
             if (!empty($password)) {
@@ -100,8 +116,10 @@ class Usuario
         }
     }
 
-    // Eliminar usuario
-    public function eliminar($id)
+    /**
+     * Delete a user by ID.
+     */
+    public function eliminar(int $id): bool
     {
         $query = "DELETE FROM usuarios WHERE id = :id";
         $stmt = $this->db->prepare($query);
@@ -109,4 +127,3 @@ class Usuario
         return $stmt->execute();
     }
 }
-?>
