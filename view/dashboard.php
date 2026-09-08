@@ -43,7 +43,7 @@ $user = $_SESSION['user'];
         .sidebar {
             width: 280px;
             min-width: 280px;
-            background: linear-gradient(0deg, #3d405b 74%, #ffffff 78%);
+            background: linear-gradient(0deg, #3d405b 10%, #ffffff 50%);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -52,7 +52,7 @@ $user = $_SESSION['user'];
             box-sizing: border-box;
 
             /* Efecto de borde derecho difuminado mediante sombra */
-            box-shadow: 10px 0 50px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 10px 0 30px 10px rgba(0, 0, 0, 0.2);
         }
 
         .sidebar-header {
