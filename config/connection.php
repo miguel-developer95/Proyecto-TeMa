@@ -1,5 +1,5 @@
 <?php
-class Conexion
+class Connection
 {
     private $host = "localhost";
     private $db_name = "tentaciones_marlly"; // Cambia al nombre de tu BD
