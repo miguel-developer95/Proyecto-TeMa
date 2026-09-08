@@ -14,7 +14,7 @@ class Cliente
     public function __construct()
     {
         $database = new connection();
-        $this->conn = $database->getConnection();
+        $this->conn = $database->getconnection();
     }
 
     // RF: registrar un nuevo cliente
