@@ -254,7 +254,7 @@ $user = $_SESSION['user'];
                         <i class="fa-solid fa-cart-shopping"></i> Ventas
                     </a>
                 </li>
-                 <li>
+                <li>
                     <a href="#">
                         <i class="fa-solid fa-cart-shopping"></i> Compras
                     </a>
@@ -325,17 +325,17 @@ $user = $_SESSION['user'];
     </main>
 
     <!-- Script para cerrar sesión al retroceder -->
-  <script>
-window.addEventListener("pageshow", function (event) {
-    var historyTraversal = event.persisted || 
-        (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
+    <script>
+        window.addEventListener("pageshow", function(event) {
+            var historyTraversal = event.persisted ||
+                (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
 
-    if (historyTraversal) {
-        // Redirige reemplazando la entrada del historial para evitar bucles
-        window.location.replace("/Proyecto-TeMa/index.php?action=logout");
-    }
-});
-</script>
+            if (historyTraversal) {
+                // Redirige reemplazando la entrada del historial para evitar bucles
+                window.location.replace("/Proyecto-TeMa/index.php?action=logout");
+            }
+        });
+    </script>
 </body>
 
 </html>

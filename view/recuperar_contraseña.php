@@ -21,19 +21,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Recuperar contraseña</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; }
-        .container { width: 400px; margin: 80px auto; background: #fff; padding: 20px; border-radius: 8px; }
-        h2 { text-align: center; }
-        input[type="email"] { width: 100%; padding: 10px; margin: 10px 0; }
-        button { width: 100%; padding: 10px; background: #007BFF; color: #fff; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .mensaje { margin-top: 15px; color: green; text-align: center; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+        }
+
+        .container {
+            width: 400px;
+            margin: 80px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #007BFF;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .mensaje {
+            margin-top: 15px;
+            color: green;
+            text-align: center;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h2>Recuperar contraseña</h2>
@@ -43,8 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit">Enviar enlace</button>
         </form>
         <?php if (isset($_SESSION['mensaje'])): ?>
-            <p class="mensaje"><?php echo $_SESSION['mensaje']; unset($_SESSION['mensaje']); ?></p>
+            <p class="mensaje"><?php echo $_SESSION['mensaje'];
+                                unset($_SESSION['mensaje']); ?></p>
         <?php endif; ?>
     </div>
 </body>
+
 </html>

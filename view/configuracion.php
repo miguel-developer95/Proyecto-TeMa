@@ -25,6 +25,7 @@ $editDocumento = $_GET['edit_documento'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -140,46 +141,46 @@ $editDocumento = $_GET['edit_documento'] ?? '';
         }
 
         /* Contenido Principal */
-        .main-content { 
-            flex: 1; 
-            padding: 30px; 
-            overflow-y: auto; 
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
         }
 
-        .crud-card { 
-            background: #fff; 
-            padding: 25px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            margin-bottom: 25px; 
+        .crud-card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
         }
-        
+
         /* Formulario Organizado en Cuadrícula */
-        .form-grid { 
+        .form-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 15px 20px;
             margin-top: 15px;
         }
 
-        .form-group { 
+        .form-group {
             width: 100%;
         }
 
-        .form-group label { 
-            display: block; 
-            font-size: 13px; 
-            font-weight: 600; 
-            margin-bottom: 5px; 
-            color: #333; 
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
         }
 
-        .form-group input { 
-            width: 100%; 
-            padding: 10px; 
-            border: 1px solid #ccc; 
-            border-radius: 6px; 
-            box-sizing: border-box; 
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
             font-size: 14px;
         }
 
@@ -191,88 +192,91 @@ $editDocumento = $_GET['edit_documento'] ?? '';
         }
 
         .btn-primary {
-            background-color: #e63c82; 
-            color: white; 
-            padding: 0 25px; 
+            background-color: #e63c82;
+            color: white;
+            padding: 0 25px;
             border: none;
-            border-radius: 8px; 
-            font-weight: 600; 
-            cursor: pointer; 
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
             text-decoration: none;
-            display: inline-flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 8px; 
-            transition: 0.3s; 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.3s;
             height: 42px;
             font-size: 14px;
             white-space: nowrap;
         }
 
-        .btn-primary:hover { 
-            background-color: #c22b68; 
+        .btn-primary:hover {
+            background-color: #c22b68;
             transform: translateY(-2px);
         }
 
-        .btn-cancel { 
-            background-color: #6c757d; 
+        .btn-cancel {
+            background-color: #6c757d;
         }
 
-        .btn-cancel:hover { 
-            background-color: #5a6268; 
+        .btn-cancel:hover {
+            background-color: #5a6268;
         }
 
         /* Tabla de Usuarios */
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 10px; 
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
         }
 
-        th, td { 
-            padding: 14px; 
-            text-align: left; 
-            border-bottom: 1px solid #eee; 
-            font-size: 14px; 
+        th,
+        td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
         }
 
-        th { 
-            background-color: #f8f9fa; 
-            color: #555; 
+        th {
+            background-color: #f8f9fa;
+            color: #555;
         }
 
-        .action-btn { 
-            padding: 6px 12px; 
-            border-radius: 6px; 
-            text-decoration: none; 
-            font-size: 13px; 
-            font-weight: 600; 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 5px; 
+        .action-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
 
-        .btn-edit { 
-            background: #e3f2fd; 
-            color: #1976d2; 
-            margin-right: 5px; 
+        .btn-edit {
+            background: #e3f2fd;
+            color: #1976d2;
+            margin-right: 5px;
         }
 
-        .btn-delete { 
-            background: #ffebee; 
-            color: #c62828; 
+        .btn-delete {
+            background: #ffebee;
+            color: #c62828;
         }
 
         @media (max-width: 768px) {
             .form-grid {
                 grid-template-columns: 1fr;
             }
+
             .btn-container {
                 grid-column: span 1;
             }
         }
     </style>
 </head>
+
 <body>
 
     <!-- Sidebar / Menú Lateral -->
@@ -338,11 +342,11 @@ $editDocumento = $_GET['edit_documento'] ?? '';
 
                     <div class="form-group">
                         <label>Número de Documento</label>
-                        <input 
-                            type="text" 
-                            name="documento" 
-                            value="<?php echo htmlspecialchars($editDocumento); ?>" 
-                            required 
+                        <input
+                            type="text"
+                            name="documento"
+                            value="<?php echo htmlspecialchars($editDocumento); ?>"
+                            required
                             placeholder="Número de documento"
                             inputmode="numeric"
                             pattern="[0-9]+"
@@ -357,7 +361,7 @@ $editDocumento = $_GET['edit_documento'] ?? '';
 
                     <div class="btn-container">
                         <button type="submit" class="btn-primary">
-                            <i class="fa-solid <?php echo $editMode ? 'fa-floppy-disk' : 'fa-user-plus'; ?>"></i> 
+                            <i class="fa-solid <?php echo $editMode ? 'fa-floppy-disk' : 'fa-user-plus'; ?>"></i>
                             <?php echo $editMode ? 'Guardar Cambios' : 'Registrar'; ?>
                         </button>
 
@@ -384,20 +388,20 @@ $editDocumento = $_GET['edit_documento'] ?? '';
                 </thead>
                 <tbody>
                     <?php foreach ($usuarios as $u): ?>
-                    <tr>
-                        <td>#<?php echo $u['id']; ?></td>
-                        <td><strong><?php echo htmlspecialchars($u['username']); ?></strong></td>
-                        <td><?php echo htmlspecialchars($u['email'] ?? $u['correo_electronico'] ?? 'Sin correo'); ?></td>
-                        <td><?php echo htmlspecialchars($u['documento'] ?? 'N/A'); ?></td>
-                        <td>
-                            <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? ''); ?>" class="action-btn btn-edit">
-                                <i class="fa-solid fa-pen"></i> Editar
-                            </a>
-                            <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este usuario?');" class="action-btn btn-delete">
-                                <i class="fa-solid fa-trash"></i> Eliminar
-                            </a>
-                        </td>
-                    </tr>
+                        <tr>
+                            <td>#<?php echo $u['id']; ?></td>
+                            <td><strong><?php echo htmlspecialchars($u['username']); ?></strong></td>
+                            <td><?php echo htmlspecialchars($u['email'] ?? $u['correo_electronico'] ?? 'Sin correo'); ?></td>
+                            <td><?php echo htmlspecialchars($u['documento'] ?? 'N/A'); ?></td>
+                            <td>
+                                <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? ''); ?>" class="action-btn btn-edit">
+                                    <i class="fa-solid fa-pen"></i> Editar
+                                </a>
+                                <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este usuario?');" class="action-btn btn-delete">
+                                    <i class="fa-solid fa-trash"></i> Eliminar
+                                </a>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
@@ -405,16 +409,17 @@ $editDocumento = $_GET['edit_documento'] ?? '';
     </main>
 
     <!-- Script para cerrar sesión al retroceder -->
-   <script>
-window.addEventListener("pageshow", function (event) {
-    var historyTraversal = event.persisted || 
-        (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
+    <script>
+        window.addEventListener("pageshow", function(event) {
+            var historyTraversal = event.persisted ||
+                (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
 
-    if (historyTraversal) {
-        // Redirige reemplazando la entrada del historial para evitar bucles
-        window.location.replace("/Proyecto-TeMa/index.php?action=logout");
-    }
-});
-</script>
+            if (historyTraversal) {
+                // Redirige reemplazando la entrada del historial para evitar bucles
+                window.location.replace("/Proyecto-TeMa/index.php?action=logout");
+            }
+        });
+    </script>
 </body>
+
 </html>
