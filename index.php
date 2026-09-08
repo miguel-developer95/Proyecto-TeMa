@@ -11,11 +11,13 @@ $controller = new UsuarioController();
 // Captura 'action' de GET o POST
 $action = $_REQUEST['action'] ?? '';
 
-if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($action === 'register') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
-    $controller->registrar($username, $password);
-} 
+    $email = $_POST['email'] ?? null;
+    $documento = $_POST['documento'] ?? null;
+    $controller->registrar($username, $password, $email, $documento);
+}
 elseif ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';

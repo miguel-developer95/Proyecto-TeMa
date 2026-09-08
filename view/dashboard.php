@@ -79,26 +79,6 @@ $user = $_SESSION['user'];
         .menu-list li a {
             display: flex;
             align-items: center;
-            padding: 16px 30px;
-            color: #1c354e;
-            text-decoration: none;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .menu-list li a i {
-            margin-right: 12px;
-            font-size: 18px;
-        }
-
-        .menu-list {
-            list-style: none;
-            margin-top: 20px;
-        }
-
-        .menu-list li a {
-            display: flex;
-            align-items: center;
             font-size: 16px;
             font-weight: 600;
             color: #adb5bd;
@@ -126,7 +106,6 @@ $user = $_SESSION['user'];
             transform: translateY(-6px);
             box-shadow: 0 6px 16px rgba(230, 60, 130, 0.3);
         }
-
 
         .logout-btn {
             padding: 12px 20px;
@@ -190,12 +169,11 @@ $user = $_SESSION['user'];
             font-weight: bold;
         }
 
-        /* Tarjetas de métricas */
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         .card {
@@ -209,7 +187,7 @@ $user = $_SESSION['user'];
         }
 
         .card-info h4 {
-            font-size: 20px;
+            font-size: 18px;
             color: #888;
             margin-bottom: -10px;
         }
@@ -235,7 +213,7 @@ $user = $_SESSION['user'];
         /* Tabla o Contenido Generico */
         .content-box {
             background: #fff;
-            padding: 3px;
+            padding: 20px;
             border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
@@ -321,16 +299,14 @@ $user = $_SESSION['user'];
                 </div>
                 <div class="card-icon"><i class="fa-solid fa-truck"></i></div>
             </div>
-        </section>
-
-        <div class="card">
-            <div class="card-info">
-                <h4>Usuarios Registrados</h4>
-                <span><?php echo $totalUsuarios; ?></span>
+            <div class="card">
+                <div class="card-info">
+                    <h4>Usuarios Registrados</h4>
+                    <span><?php echo $totalUsuarios; ?></span>
+                </div>
+                <div class="card-icon"><i class="fa-solid fa-users"></i></div>
             </div>
-            <div class="card-icon"><i class="fa-solid fa-users"></i></div>
-        </div>
-
+        </section>
 
         <!-- Área Central -->
         <section class="content-box">

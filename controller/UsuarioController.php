@@ -4,20 +4,18 @@ require_once __DIR__ . '/../model/usuario.php';
 
 class UsuarioController {
     
-    public function registrar($username, $password) {
-        $usuarioModel = new Usuario();
-        $resultado = $usuarioModel->registrar($username, $password);
+   public function registrar($username, $password, $email = null, $documento = null) {
+    $usuarioModel = new Usuario();
+    $resultado = $usuarioModel->registrar($username, $password, $email, $documento);
 
-        if ($resultado) {
-            // Éxito -> Redirige al login usando ruta raíz para evitar 404
-            header("Location: /Proyecto-TeMa/view/login.php?status=registered");
-            exit(); 
-        } else {
-            // Error (Usuario duplicado) -> Redirige a la vista de registro
-            header("Location: /Proyecto-TeMa/view/register.php?error=user_exists");
-            exit();
-        }
+    if ($resultado) {
+        header("Location: /Proyecto-TeMa/view/login.php?status=registered");
+        exit(); 
+    } else {
+        header("Location: /Proyecto-TeMa/view/register.php?error=user_exists");
+        exit();
     }
+}
 
     public function login($username, $password) {
         if (session_status() === PHP_SESSION_NONE) {

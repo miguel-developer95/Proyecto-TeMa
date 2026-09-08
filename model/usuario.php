@@ -11,10 +11,10 @@ class Usuario
         $this->db = (new Conexion())->conn;
     }
 
-    // Método para verificar el login
+    // Método para verificar el login (permite usuario o email)
     public function login($username, $password)
     {
-        $query = "SELECT * FROM usuarios WHERE username = :username";
+        $query = "SELECT * FROM usuarios WHERE username = :username OR email = :username";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":username", $username);
         $stmt->execute();
@@ -27,18 +27,19 @@ class Usuario
         return false;
     }
 
-    // Método para registrar un usuario con contraseña encriptada
-    public function registrar($username, $password)
+    // Método para registrar un usuario
+    public function registrar($username, $password, $email = null, $documento = null)
     {
         try {
             $hash = password_hash($password, PASSWORD_BCRYPT);
-            $query = "INSERT INTO usuarios (username, password) VALUES (:username, :password)";
+            $query = "INSERT INTO usuarios (username, password, email, documento) VALUES (:username, :password, :email, :documento)";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(":username", $username);
             $stmt->bindParam(":password", $hash);
+            $stmt->bindParam(":email", $email);
+            $stmt->bindParam(":documento", $documento);
             return $stmt->execute();
         } catch (PDOException $e) {
-            // Código 23000 indica violación de restricción (ej. usuario duplicado)
             if ($e->getCode() == 23000) {
                 return false;
             }
@@ -56,18 +57,20 @@ class Usuario
         return $result['total'];
     }
 
-    // Obtener todos los usuarios para la tabla
+    // Obtener todos los usuarios de la tabla de forma segura
     public function obtenerTodos()
     {
-        $query = "SELECT id, username FROM usuarios ORDER BY id DESC";
+        // Se envuelve `No.Documento` en comillas invertidas para evitar el error de sintaxis de MariaDB
+        $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento` FROM usuarios ORDER BY id DESC";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
     // Obtener usuario por ID
     public function obtenerPorId($id)
     {
-        $query = "SELECT id, username FROM usuarios WHERE id = :id";
+        $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento` FROM usuarios WHERE id = :id";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":id", $id);
         $stmt->execute();
@@ -75,19 +78,21 @@ class Usuario
     }
 
     // Actualizar usuario
-    public function actualizar($id, $username, $password = null)
+    public function actualizar($id, $username, $email = null, $documento = null, $password = null)
     {
         try {
             if (!empty($password)) {
                 $hash = password_hash($password, PASSWORD_BCRYPT);
-                $query = "UPDATE usuarios SET username = :username, password = :password WHERE id = :id";
+                $query = "UPDATE usuarios SET username = :username, email = :email, documento = :documento, password = :password WHERE id = :id";
                 $stmt = $this->db->prepare($query);
                 $stmt->bindParam(":password", $hash);
             } else {
-                $query = "UPDATE usuarios SET username = :username WHERE id = :id";
+                $query = "UPDATE usuarios SET username = :username, email = :email, documento = :documento WHERE id = :id";
                 $stmt = $this->db->prepare($query);
             }
             $stmt->bindParam(":username", $username);
+            $stmt->bindParam(":email", $email);
+            $stmt->bindParam(":documento", $documento);
             $stmt->bindParam(":id", $id);
             return $stmt->execute();
         } catch (PDOException $e) {
@@ -104,3 +109,4 @@ class Usuario
         return $stmt->execute();
     }
 }
+?>

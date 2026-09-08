@@ -25,7 +25,7 @@
             <?php if (isset($_GET['error']) && $_GET['error'] === 'user_exists'): ?>
                 <p
                     style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
-                    El nombre de usuario ya existe. Por favor elige otro.
+                    El nombre de usuario, correo o documento ya existe. Por favor verifica.
                 </p>
             <?php endif; ?>
 
@@ -36,6 +36,16 @@
                 <div class="input-group">
                     <i class="fa-solid fa-user"></i>
                     <input type="text" id="username" name="username" placeholder="Nombre de usuario" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" id="email" name="email" placeholder="Correo electrónico" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-id-card"></i>
+                    <input type="text" id="documento" name="documento" placeholder="Número de documento" required>
                 </div>
 
                 <div class="input-group">
