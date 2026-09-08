@@ -1,15 +1,4 @@
-<?php
-/**
- * model/informes.php
- * Sistema de Registro e Inventario Ke-rico - Tentaciones Marlly
- *
- * Módulo: Administración -> Informes
- * Cubre: RF 2.1 (ganancia real por producto/categoría)
- *        RF 2.2 (productos más vendidos / baja rotación)
- *        RF 2.3 (matriz de permisos Administrador vs Vendedor)
- *
- * Patrón: MVC - Capa Modelo (acceso a datos con PDO)
- */
+<?php 
 
 require_once __DIR__ . '/conexion.php';
 
