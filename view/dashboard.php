@@ -251,6 +251,11 @@ $user = $_SESSION['user'];
                         <i class="fa-solid fa-cart-shopping"></i> Ventas
                     </a>
                 </li>
+                 <li>
+                    <a href="#">
+                        <i class="fa-solid fa-cart-shopping"></i> Compras
+                    </a>
+                </li>
                 <li>
                     <a href="/Proyecto-TeMa/view/configuracion.php">
                         <i class="fa-solid fa-gear"></i> Configuración
