@@ -51,7 +51,7 @@
                     <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
                 </div>
 
-                <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+                <a href="" class="forgot-link">¿Olvidaste tu contraseña?</a>
 
                 <button type="submit">Iniciar Sesión</button>
             </form>
