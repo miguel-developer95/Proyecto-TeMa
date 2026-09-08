@@ -65,7 +65,7 @@ if (isset($_SESSION['user'])) {
                     <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
                 </div>
 
-                <a href="" class="forgot-link">¿Olvidaste tu contraseña?</a>
+                <a href="recuperar_contraseña.php" class="forgot-link">¿Olvidaste tu contraseña?</a>
 
                 <button type="submit">Iniciar Sesión</button>
             </form>
