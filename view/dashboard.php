@@ -243,7 +243,7 @@ $user = $_SESSION['user'];
                 </li>
                 <li>
                     <a href="#">
-                        <i class="fa-solid fa-box"></i> Productos
+                        <i class="fa-solid fa-box"></i> Inventario
                     </a>
                 </li>
                 <li>
