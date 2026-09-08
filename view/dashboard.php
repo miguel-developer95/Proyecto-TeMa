@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Verifica si hay sesión iniciada
 if (!isset($_SESSION['user'])) {
-    header("Location: /PHP---Tentaciones-Marlly/view/login.php");
+    header("Location: /Proyecto-TeMa/view/login.php");
     exit();
 }
 require_once __DIR__ . '/../model/usuario.php';
@@ -22,7 +22,7 @@ $user = $_SESSION['user'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Tentaciones Marlly</title>
     <!-- CSS del proyecto o específico del dashboard -->
-    <link rel="stylesheet" href="/PHP---Tentaciones-Marlly/public/index.css">
+    <link rel="stylesheet" href="/Proyecto-TeMa/public/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         /* Estilos del Dashboard */
@@ -254,12 +254,12 @@ $user = $_SESSION['user'];
     <aside class="sidebar">
         <div>
             <div class="sidebar-header">
-                <img src="/PHP---Tentaciones-Marlly/public/logo.png" alt="Logo">
+                <img src="/Proyecto-TeMa/public/logo.png" alt="Logo">
                 <h3>Tentaciones Marlly</h3>
             </div>
             <ul class="menu-list">
                 <li class="active">
-                    <a href="/PHP---Tentaciones-Marlly/view/dashboard.php">
+                    <a href="/Proyecto-TeMa/view/dashboard.php">
                         <i class="fa-solid fa-chart-line"></i> Dashboard
                     </a>
                 </li>
@@ -274,13 +274,13 @@ $user = $_SESSION['user'];
                     </a>
                 </li>
                 <li>
-                    <a href="/PHP---Tentaciones-Marlly/view/configuracion.php">
+                    <a href="/Proyecto-TeMa/view/configuracion.php">
                         <i class="fa-solid fa-gear"></i> Configuración
                     </a>
                 </li>
             </ul>
         </div>
-        <a href="/PHP---Tentaciones-Marlly/index.php?action=logout" class="logout-btn">
+        <a href="/Proyecto-TeMa/index.php?action=logout" class="logout-btn">
             <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
         </a>
     </aside>

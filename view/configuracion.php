@@ -1,7 +1,7 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['user'])) {
-    header("Location: /PHP---Tentaciones-Marlly/view/login.php");
+    header("Location: /Proyecto-TeMa/view/login.php");
     exit();
 }
 
@@ -82,13 +82,13 @@ $editUsername = $_GET['edit_username'] ?? '';
     <aside class="sidebar">
         <div>
             <ul class="menu-list">
-                <li><a href="/PHP---Tentaciones-Marlly/view/dashboard.php"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="/Proyecto-TeMa/view/dashboard.php"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
                 <li><a href="#"><i class="fa-solid fa-box"></i> Productos</a></li>
                 <li><a href="#"><i class="fa-solid fa-cart-shopping"></i> Ventas</a></li>
-                <li class="active"><a href="/PHP---Tentaciones-Marlly/view/configuracion.php"><i class="fa-solid fa-gear"></i> Configuración</a></li>
+                <li class="active"><a href="/Proyecto-TeMa/view/configuracion.php"><i class="fa-solid fa-gear"></i> Configuración</a></li>
             </ul>
         </div>
-        <a href="/PHP---Tentaciones-Marlly/index.php?action=logout" class="logout-btn">
+        <a href="/Proyecto-TeMa/index.php?action=logout" class="logout-btn">
             <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
         </a>
     </aside>
@@ -100,7 +100,7 @@ $editUsername = $_GET['edit_username'] ?? '';
         <!-- Formulario (Registrar o Editar) -->
         <div class="crud-card">
             <h3><?php echo $editMode ? 'Editar Usuario #' . htmlspecialchars($editId) : 'Crear Nuevo Usuario'; ?></h3>
-            <form action="/PHP---Tentaciones-Marlly/index.php" method="POST">
+            <form action="/Proyecto-TeMa/index.php" method="POST">
                 <input type="hidden" name="action" value="<?php echo $editMode ? 'update_user' : 'register'; ?>">
                 <?php if ($editMode): ?>
                     <input type="hidden" name="id" value="<?php echo htmlspecialchars($editId); ?>">
@@ -123,7 +123,7 @@ $editUsername = $_GET['edit_username'] ?? '';
                     </button>
 
                     <?php if ($editMode): ?>
-                        <a href="/PHP---Tentaciones-Marlly/view/configuracion.php" class="btn-primary btn-cancel">Cancelar</a>
+                        <a href="/Proyecto-TeMa/view/configuracion.php" class="btn-primary btn-cancel">Cancelar</a>
                     <?php endif; ?>
                 </div>
             </form>
@@ -146,10 +146,10 @@ $editUsername = $_GET['edit_username'] ?? '';
                         <td>#<?php echo $u['id']; ?></td>
                         <td><strong><?php echo htmlspecialchars($u['username']); ?></strong></td>
                         <td>
-                            <a href="/PHP---Tentaciones-Marlly/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>" class="action-btn btn-edit">
+                            <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>" class="action-btn btn-edit">
                                 <i class="fa-solid fa-pen"></i> Editar
                             </a>
-                            <a href="/PHP---Tentaciones-Marlly/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este usuario?');" class="action-btn btn-delete">
+                            <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este usuario?');" class="action-btn btn-delete">
                                 <i class="fa-solid fa-trash"></i> Eliminar
                             </a>
                         </td>

@@ -40,7 +40,7 @@ elseif ($action === 'logout') {
 } 
 else {
     // Si no hay acción válida, redirigir al login
-    header("Location: /PHP---Tentaciones-Marlly/view/login.php");
+    header("Location: /Proyecto-TeMa/view/login.php");
     exit();
 }
 ?>

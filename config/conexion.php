@@ -2,7 +2,7 @@
 class Conexion
 {
     private $host = "localhost";
-    private $db_name = "login_db"; // Cambia al nombre de tu BD
+    private $db_name = "tentaciones_marlly"; // Cambia al nombre de tu BD
     private $username = "root";
     private $password = "";
     public $conn;

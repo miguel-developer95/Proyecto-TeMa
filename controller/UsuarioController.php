@@ -10,11 +10,11 @@ class UsuarioController {
 
         if ($resultado) {
             // Éxito -> Redirige al login usando ruta raíz para evitar 404
-            header("Location: /PHP---Tentaciones-Marlly/view/login.php?status=registered");
+            header("Location: /Proyecto-TeMa/view/login.php?status=registered");
             exit(); 
         } else {
             // Error (Usuario duplicado) -> Redirige a la vista de registro
-            header("Location: /PHP---Tentaciones-Marlly/view/register.php?error=user_exists");
+            header("Location: /Proyecto-TeMa/view/register.php?error=user_exists");
             exit();
         }
     }
@@ -29,10 +29,10 @@ class UsuarioController {
 
         if ($user) {
             $_SESSION['user'] = $user;
-            header("Location: /PHP---Tentaciones-Marlly/view/dashboard.php");
+            header("Location: /Proyecto-TeMa/view/dashboard.php");
             exit();
         } else {
-            header("Location: /PHP---Tentaciones-Marlly/view/login.php?error=invalid_credentials");
+            header("Location: /Proyecto-TeMa/view/login.php?error=invalid_credentials");
             exit();
         }
     }
@@ -42,16 +42,16 @@ class UsuarioController {
             session_start();
         }
         session_destroy();
-        header("Location: /PHP---Tentaciones-Marlly/view/login.php");
+        header("Location: /Proyecto-TeMa/view/login.php");
         exit();
     }
 
     public function eliminar($id) {
         $usuarioModel = new Usuario();
         if ($usuarioModel->eliminar($id)) {
-            header("Location: /PHP---Tentaciones-Marlly/view/configuracion.php?status=deleted");
+            header("Location: /Proyecto-TeMa/view/configuracion.php?status=deleted");
         } else {
-            header("Location: /PHP---Tentaciones-Marlly/view/configuracion.php?error=delete_failed");
+            header("Location: /Proyecto-TeMa/view/configuracion.php?error=delete_failed");
         }
         exit();
     }
@@ -59,7 +59,7 @@ class UsuarioController {
     public function editar($id, $username, $password) {
     $usuarioModel = new Usuario();
     $usuarioModel->actualizar($id, $username, $password);
-    header("Location: /PHP---Tentaciones-Marlly/view/configuracion.php?status=updated");
+    header("Location: /Proyecto-TeMa/view/configuracion.php?status=updated");
     exit();
 }    
 }

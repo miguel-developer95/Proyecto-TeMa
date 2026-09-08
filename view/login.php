@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tentaciones Marlly - Iniciar Sesión</title>
-    <link rel="stylesheet" href="/PHP---Tentaciones-Marlly/public/index.css">
+    <link rel="stylesheet" href="/Proyecto-TeMa/public/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -14,7 +14,7 @@
     <div class="login-wrapper">
         <div class="login-card">
 
-            <img src="/PHP---Tentaciones-Marlly/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
+            <img src="/Proyecto-TeMa/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
 
             <p class="tagline">MINI TIENDA DE CONSUMO DIARIO</p>
 
@@ -37,7 +37,7 @@
             <?php endif; ?>
 
             <!-- Formulario configurado para el controlador MVC -->
-            <form action="/PHP---Tentaciones-Marlly/index.php" method="POST">
+            <form action="/Proyecto-TeMa/index.php" method="POST">
                 <input type="hidden" name="action" value="login">
 
                 <div class="input-group">

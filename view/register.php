@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tentaciones Marlly - Registrarse</title>
-    <link rel="stylesheet" href="/PHP---Tentaciones-Marlly/public/index.css">
+    <link rel="stylesheet" href="/Proyecto-TeMa/public/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -14,7 +14,7 @@
     <div class="login-wrapper">
         <div class="login-card">
 
-            <img src="/PHP---Tentaciones-Marlly/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
+            <img src="/Proyecto-TeMa/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
 
             <p class="tagline">MINI TIENDA DE CONSUMO DIARIO</p>
 
@@ -30,7 +30,7 @@
             <?php endif; ?>
 
             <!-- Formulario configurado hacia el controlador -->
-            <form action="/PHP---Tentaciones-Marlly/index.php" method="POST">
+            <form action="/Proyecto-TeMa/index.php" method="POST">
                 <input type="hidden" name="action" value="register">
 
                 <div class="input-group">
@@ -48,7 +48,7 @@
             </form>
 
             <p class="register-link" style="margin-top: 20px; font-size: 14px; color: #888;">
-                ¿Ya tienes una cuenta? <a href="/PHP---Tentaciones-Marlly/view/login.php"
+                ¿Ya tienes una cuenta? <a href="/Proyecto-TeMa/view/login.php"
                     style="color: #e63c82; text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
             </p>
 
