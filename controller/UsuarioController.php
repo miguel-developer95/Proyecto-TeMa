@@ -3,26 +3,25 @@
 require_once __DIR__ . '/../model/usuario.php';
 
 class UsuarioController {
-    
-   public function registrar($username, $password, $email = null, $documento = null) {
-    $usuarioModel = new Usuario();
-    $resultado = $usuarioModel->registrar($username, $password, $email, $documento);
 
-    
-    if ($resultado) {
-        header("Location: /Proyecto-TeMa/view/login.php?status=registered");
-        exit(); 
-    } else {
-        header("Location: /Proyecto-TeMa/view/register.php?error=user_exists");
-        exit();
+    public function registrar($nombre, $apellido, $rol, $password, $email = null, $documento = null) {
+        $usuarioModel = new Usuario();
+        $resultado = $usuarioModel->registrar($nombre, $apellido, $rol, $password, $email, $documento);
+
+        if ($resultado) {
+            header("Location: /Proyecto-TeMa/view/login.php?status=registered");
+            exit();
+        } else {
+            header("Location: /Proyecto-TeMa/view/register.php?error=user_exists");
+            exit();
+        }
     }
-}
 
     public function login($username, $password) {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
+
         $usuarioModel = new Usuario();
         $user = $usuarioModel->login($username, $password);
 
@@ -56,10 +55,10 @@ class UsuarioController {
     }
 
     public function editar($id, $username, $password) {
-    $usuarioModel = new Usuario();
-    $usuarioModel->actualizar($id, $username, $password);
-    header("Location: /Proyecto-TeMa/view/configuracion.php?status=updated");
-    exit();
-}    
+        $usuarioModel = new Usuario();
+        $usuarioModel->actualizar($id, $username, $password);
+        header("Location: /Proyecto-TeMa/view/configuracion.php?status=updated");
+        exit();
+    }
 }
 ?>
