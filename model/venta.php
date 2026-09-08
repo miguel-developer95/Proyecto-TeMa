@@ -4,20 +4,26 @@ require_once __DIR__ . '/../config/conexion.php';
 
 class Venta
 {
-    private $db;
+    /** @var PDO */
+    private PDO $db;
 
     public function __construct()
     {
         $this->db = (new Conexion())->conn;
     }
 
-    // Registrar una nueva venta (RF 5.1, RF 5.2, RF 5.3)
-    public function registrar($productos, $tipo_pago, $empresa = null, $valor_recibido, $id_cliente = null)
+    /**
+     * Register a new sale and update product stock.
+     * 
+     * @param array $productos List of products with id_producto, cantidad, and precio_unitario.
+     * @return string|false Returns the inserted sale ID on success, or false on failure.
+     */
+    public function registrar(array $productos, string $tipo_pago, ?string $empresa, float $valor_recibido, ?int $id_cliente = null)
     {
         try {
             $this->db->beginTransaction();
 
-            // Insertar venta
+            // Insert sale record
             $queryVenta = "INSERT INTO ventas (fecha, tipo_pago, empresa, valor_recibido, id_cliente) 
                            VALUES (NOW(), :tipo_pago, :empresa, :valor_recibido, :id_cliente)";
             $stmtVenta = $this->db->prepare($queryVenta);
@@ -28,7 +34,7 @@ class Venta
             $stmtVenta->execute();
             $idVenta = $this->db->lastInsertId();
 
-            // Insertar detalle de productos y actualizar stock
+            // Insert sale details and update stock
             foreach ($productos as $producto) {
                 $queryDetalle = "INSERT INTO detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) 
                                  VALUES (:id_venta, :id_producto, :cantidad, :precio_unitario)";
@@ -39,7 +45,7 @@ class Venta
                 $stmtDetalle->bindParam(":precio_unitario", $producto['precio_unitario']);
                 $stmtDetalle->execute();
 
-                // Actualizar stock
+                // Update stock
                 $queryStock = "UPDATE productos SET cantidad = cantidad - :cantidad WHERE id = :id_producto";
                 $stmtStock = $this->db->prepare($queryStock);
                 $stmtStock->bindParam(":cantidad", $producto['cantidad']);
@@ -55,8 +61,10 @@ class Venta
         }
     }
 
-    // Obtener todas las ventas (RF 5.4, RF 5.5, RF 5.6)
-    public function obtenerTodas()
+    /**
+     * Fetch all sales records.
+     */
+    public function obtenerTodas(): array
     {
         $query = "SELECT v.id, v.fecha, v.tipo_pago, v.empresa, v.valor_recibido, c.nombre as cliente
                   FROM ventas v
@@ -67,8 +75,12 @@ class Venta
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Obtener venta por ID
-    public function obtenerPorId($id)
+    /**
+     * Fetch a sale record by ID.
+     * 
+     * @return array|false
+     */
+    public function obtenerPorId(int $id)
     {
         $query = "SELECT * FROM ventas WHERE id = :id";
         $stmt = $this->db->prepare($query);
@@ -77,20 +89,22 @@ class Venta
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    // Cancelar una venta (RF 5.5)
-    public function cancelar($id, $motivo)
+    /**
+     * Cancel a sale and return items back to stock.
+     */
+    public function cancelar(int $id, string $motivo): bool
     {
         try {
             $this->db->beginTransaction();
 
-            // Registrar motivo de cancelación
+            // Register cancellation reason
             $query = "UPDATE ventas SET estado = 'anulada', motivo = :motivo WHERE id = :id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(":motivo", $motivo);
             $stmt->bindParam(":id", $id);
             $stmt->execute();
 
-            // Reintegrar productos al stock
+            // Reintegrate products into stock
             $queryDetalle = "SELECT id_producto, cantidad FROM detalle_ventas WHERE id_venta = :id_venta";
             $stmtDetalle = $this->db->prepare($queryDetalle);
             $stmtDetalle->bindParam(":id_venta", $id);
@@ -113,8 +127,10 @@ class Venta
         }
     }
 
-    // Generar recibo electrónico (RF 5.6)
-    public function generarRecibo($idVenta)
+    /**
+     * Generate electronic receipt details.
+     */
+    public function generarRecibo(int $idVenta): array
     {
         $query = "SELECT v.id, v.fecha, v.tipo_pago, v.empresa, v.valor_recibido, c.nombre as cliente, c.correo_electronico
                   FROM ventas v
