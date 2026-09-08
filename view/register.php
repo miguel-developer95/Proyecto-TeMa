@@ -6,8 +6,10 @@ header("Expires: 0"); // Proxies
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-if (!isset($_SESSION['user'])) {
-    header("Location: /Proyecto-TeMa/view/login.php");
+// OPCIONAL: si el usuario YA tiene sesión activa, no tiene sentido
+// que vuelva a registrarse; lo mandamos directo al dashboard.
+if (isset($_SESSION['user'])) {
+    header("Location: /Proyecto-TeMa/view/dashboard.php");
     exit();
 }
 ?>
@@ -48,7 +50,21 @@ if (!isset($_SESSION['user'])) {
 
                 <div class="input-group">
                     <i class="fa-solid fa-user"></i>
-                    <input type="text" id="username" name="username" placeholder="Nombre de usuario" required>
+                    <input type="text" name="nombre" placeholder="Nombre" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" name="apellido" placeholder="Apellido" required>
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-id-badge"></i>
+                    <select name="rol" required>
+                        <option value="">Selecciona un rol</option>
+                        <option value="Administrador">Administrador</option>
+                        <option value="Vendedor">Vendedor</option>
+                    </select>
                 </div>
 
                 <div class="input-group">

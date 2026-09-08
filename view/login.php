@@ -71,7 +71,7 @@ if (isset($_SESSION['user'])) {
             </form>
 
             <p class="register-link" style="margin-top: 15px; font-size: 14px; color: #888;">
-                ¿No tienes cuenta? <a href="register.php"
+                ¿No tienes cuenta? <a href="/Proyecto-TeMa/view/register.php"
                     style="color: #e63c82; text-decoration: none; font-weight: 600;">Regístrate</a>
             </p>
 
