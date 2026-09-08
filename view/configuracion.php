@@ -14,6 +14,8 @@ $usuarios = $usuarioModel->obtenerTodos();
 $editMode = isset($_GET['edit_id']);
 $editId = $_GET['edit_id'] ?? '';
 $editUsername = $_GET['edit_username'] ?? '';
+$editEmail = $_GET['edit_email'] ?? '';
+$editDocumento = $_GET['edit_documento'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -146,17 +148,16 @@ $editUsername = $_GET['edit_username'] ?? '';
             margin-bottom: 25px; 
         }
         
-        /* Formulario y Botón de Registro Corregido */
+        /* Formulario Organizado en Cuadrícula */
         .form-grid { 
-            display: flex; 
-            gap: 15px; 
-            align-items: flex-end; 
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px 20px;
+            margin-top: 15px;
         }
 
         .form-group { 
-            flex: 1; 
-            min-width: 200px;
+            width: 100%;
         }
 
         .form-group label { 
@@ -177,8 +178,10 @@ $editUsername = $_GET['edit_username'] ?? '';
         }
 
         .btn-container {
+            grid-column: span 2;
             display: flex;
             gap: 10px;
+            margin-top: 10px;
         }
 
         .btn-primary {
@@ -253,6 +256,15 @@ $editUsername = $_GET['edit_username'] ?? '';
             background: #ffebee; 
             color: #c62828; 
         }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .btn-container {
+                grid-column: span 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -314,6 +326,24 @@ $editUsername = $_GET['edit_username'] ?? '';
                     </div>
 
                     <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" name="email" value="<?php echo htmlspecialchars($editEmail); ?>" required placeholder="correo@ejemplo.com">
+                    </div>
+
+                    <div class="form-group">
+    <label>Número de Documento</label>
+    <input 
+        type="text" 
+        name="documento" 
+        value="<?php echo htmlspecialchars($editDocumento); ?>" 
+        required 
+        placeholder="Número de documento"
+        inputmode="numeric"
+        pattern="[0-9]+"
+        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+        title="Ingresa únicamente números">
+</div>
+                    <div class="form-group">
                         <label>Contraseña <?php echo $editMode ? '(Dejar vacío para conservar)' : ''; ?></label>
                         <input type="password" name="password" <?php echo $editMode ? '' : 'required'; ?> placeholder="<?php echo $editMode ? 'Opcional' : 'Contraseña'; ?>">
                     </div>
@@ -341,7 +371,7 @@ $editUsername = $_GET['edit_username'] ?? '';
                         <th>ID</th>
                         <th>Nombre de Usuario</th>
                         <th>Correo</th>
-                        <th>No.Documento</th>
+                        <th>No. Documento</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -350,10 +380,10 @@ $editUsername = $_GET['edit_username'] ?? '';
                     <tr>
                         <td>#<?php echo $u['id']; ?></td>
                         <td><strong><?php echo htmlspecialchars($u['username']); ?></strong></td>
-                        <td><?php echo htmlspecialchars($u['correo_electronico'] ?? $u['email'] ?? $u['USUA_correo'] ?? 'Sin correo'); ?></td>
-                        <td><?php echo htmlspecialchars($u['No.Documento'] ?? $u['documento'] ?? 'N/A'); ?></td>
+                        <td><?php echo htmlspecialchars($u['email'] ?? $u['correo_electronico'] ?? 'Sin correo'); ?></td>
+                        <td><?php echo htmlspecialchars($u['documento'] ?? 'N/A'); ?></td>
                         <td>
-                            <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>" class="action-btn btn-edit">
+                            <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? ''); ?>" class="action-btn btn-edit">
                                 <i class="fa-solid fa-pen"></i> Editar
                             </a>
                             <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este usuario?');" class="action-btn btn-delete">

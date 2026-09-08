@@ -8,6 +8,7 @@ class UsuarioController {
     $usuarioModel = new Usuario();
     $resultado = $usuarioModel->registrar($username, $password, $email, $documento);
 
+    
     if ($resultado) {
         header("Location: /Proyecto-TeMa/view/login.php?status=registered");
         exit(); 
