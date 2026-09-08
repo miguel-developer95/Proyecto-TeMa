@@ -41,8 +41,12 @@ elseif ($action === 'logout') {
     $controller->logout();
 } 
 else {
-    // Si no hay acción válida, redirigir al login
-    header("Location: /Proyecto-TeMa/view/login.php");
+    // Si el usuario ya inició sesión, redirigir al dashboard en lugar del login
+    if (isset($_SESSION['user'])) {
+        header("Location: /Proyecto-TeMa/view/dashboard.php");
+    } else {
+        header("Location: /Proyecto-TeMa/view/login.php");
+    }
     exit();
 }
 ?>

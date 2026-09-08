@@ -1,3 +1,17 @@
+<?php
+// Deshabilitar la memoria caché del navegador
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
+header("Pragma: no-cache"); // HTTP 1.0
+header("Expires: 0"); // Proxies
+
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+// SI YA TIENE SESIÓN ACTIVA, REDIRIGIR AL DASHBOARD
+if (isset($_SESSION['user'])) {
+    header("Location: /Proyecto-TeMa/view/dashboard.php");
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -56,7 +70,6 @@
                 <button type="submit">Iniciar Sesión</button>
             </form>
 
-            <!-- Opción 1: Enlace relativo correcto (ambos archivos están en la carpeta view) -->
             <p class="register-link" style="margin-top: 15px; font-size: 14px; color: #888;">
                 ¿No tienes cuenta? <a href="register.php"
                     style="color: #e63c82; text-decoration: none; font-weight: 600;">Regístrate</a>

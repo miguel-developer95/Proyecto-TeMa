@@ -1,13 +1,16 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Deshabilitar la memoria caché del navegador
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
+header("Pragma: no-cache"); // HTTP 1.0
+header("Expires: 0"); // Proxies
 
-// Verifica si hay sesión iniciada
+if (session_status() === PHP_SESSION_NONE) session_start();
+
 if (!isset($_SESSION['user'])) {
     header("Location: /Proyecto-TeMa/view/login.php");
     exit();
 }
+
 require_once __DIR__ . '/../model/usuario.php';
 $usuarioModel = new Usuario();
 $totalUsuarios = $usuarioModel->contarUsuarios();
@@ -316,6 +319,18 @@ $user = $_SESSION['user'];
         </section>
     </main>
 
+    <!-- Script para cerrar sesión al retroceder -->
+  <script>
+window.addEventListener("pageshow", function (event) {
+    var historyTraversal = event.persisted || 
+        (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
+
+    if (historyTraversal) {
+        // Redirige reemplazando la entrada del historial para evitar bucles
+        window.location.replace("/Proyecto-TeMa/index.php?action=logout");
+    }
+});
+</script>
 </body>
 
 </html>

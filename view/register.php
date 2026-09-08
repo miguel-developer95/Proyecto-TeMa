@@ -1,3 +1,16 @@
+<?php
+// Deshabilitar la memoria caché del navegador
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
+header("Pragma: no-cache"); // HTTP 1.0
+header("Expires: 0"); // Proxies
+
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+if (!isset($_SESSION['user'])) {
+    header("Location: /Proyecto-TeMa/view/login.php");
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 

@@ -1,5 +1,11 @@
 <?php
+// Deshabilitar la memoria caché del navegador
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
+header("Pragma: no-cache"); // HTTP 1.0
+header("Expires: 0"); // Proxies
+
 if (session_status() === PHP_SESSION_NONE) session_start();
+
 if (!isset($_SESSION['user'])) {
     header("Location: /Proyecto-TeMa/view/login.php");
     exit();
@@ -331,18 +337,19 @@ $editDocumento = $_GET['edit_documento'] ?? '';
                     </div>
 
                     <div class="form-group">
-    <label>Número de Documento</label>
-    <input 
-        type="text" 
-        name="documento" 
-        value="<?php echo htmlspecialchars($editDocumento); ?>" 
-        required 
-        placeholder="Número de documento"
-        inputmode="numeric"
-        pattern="[0-9]+"
-        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-        title="Ingresa únicamente números">
-</div>
+                        <label>Número de Documento</label>
+                        <input 
+                            type="text" 
+                            name="documento" 
+                            value="<?php echo htmlspecialchars($editDocumento); ?>" 
+                            required 
+                            placeholder="Número de documento"
+                            inputmode="numeric"
+                            pattern="[0-9]+"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                            title="Ingresa únicamente números">
+                    </div>
+
                     <div class="form-group">
                         <label>Contraseña <?php echo $editMode ? '(Dejar vacío para conservar)' : ''; ?></label>
                         <input type="password" name="password" <?php echo $editMode ? '' : 'required'; ?> placeholder="<?php echo $editMode ? 'Opcional' : 'Contraseña'; ?>">
@@ -397,5 +404,17 @@ $editDocumento = $_GET['edit_documento'] ?? '';
         </div>
     </main>
 
+    <!-- Script para cerrar sesión al retroceder -->
+   <script>
+window.addEventListener("pageshow", function (event) {
+    var historyTraversal = event.persisted || 
+        (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
+
+    if (historyTraversal) {
+        // Redirige reemplazando la entrada del historial para evitar bucles
+        window.location.replace("/Proyecto-TeMa/index.php?action=logout");
+    }
+});
+</script>
 </body>
 </html>
