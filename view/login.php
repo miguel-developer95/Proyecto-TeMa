@@ -19,7 +19,7 @@ if (isset($_SESSION['user'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tentaciones Marlly - Iniciar Sesión</title>
-    <link rel="stylesheet" href="/Proyecto-TeMa/public/index.css">
+    <link rel="stylesheet" href="/Proyecto-TeMa/view/styles/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -65,7 +65,7 @@ if (isset($_SESSION['user'])) {
                     <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
                 </div>
 
-                <a href="recuperar_contraseña.php" class="forgot-link">¿Olvidaste tu contraseña?</a>
+                <a href="recuperar_contra.php" class="forgot-link">¿Olvidaste tu contraseña?</a>
 
                 <button type="submit">Iniciar Sesión</button>
             </form>

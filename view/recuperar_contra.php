@@ -25,49 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Recuperar contraseña</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-        }
-
-        .container {
-            width: 400px;
-            margin: 80px auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-        }
-
-        h2 {
-            text-align: center;
-        }
-
-        input[type="email"] {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #007BFF;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #0056b3;
-        }
-
-        .mensaje {
-            margin-top: 15px;
-            color: green;
-            text-align: center;
-        }
-    </style>
+    <link rel="stylesheet" href="/Proyecto-TeMa/view/styles/recuperar_contra.css">
 </head>
 
 <body>
