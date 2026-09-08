@@ -1,6 +1,6 @@
 <?php
 // model/usuario.php
-require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../config/connection.php';
 
 class Usuario
 {
@@ -9,7 +9,7 @@ class Usuario
 
     public function __construct()
     {
-        $this->db = (new Conexion())->conn;
+        $this->db = (new Connection())->conn;
     }
 
     /**
