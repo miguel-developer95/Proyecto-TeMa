@@ -1,6 +1,6 @@
 <?php
 // model/usuario.php
-require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../config/connection.php';
 
 class Usuario
 {
