@@ -1,13 +1,19 @@
 <?php
 // Deshabilitar la memoria caché del navegador
-header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
-header("Pragma: no-cache"); // HTTP 1.0
-header("Expires: 0"); // Proxies
+header("Cache-Control: no-cache, no-store, must-revalidate"); 
+header("Pragma: no-cache"); 
+header("Expires: 0"); 
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['user'])) {
     header("Location: /Proyecto-TeMa/view/login.php");
+    exit();
+}
+// solo administrador entra al dashboard
+$rolActual = strtolower($_SESSION['user']['rol'] ?? '');
+if ($rolActual !== 'administrador') {
+    header("Location: /Proyecto-TeMa/view/pos.php");
     exit();
 }
 
@@ -25,7 +31,7 @@ $user = $_SESSION['user'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Tentaciones Marlly</title>
     <!-- CSS del proyecto o específico del dashboard -->
-    <link rel="stylesheet" href="/Proyecto-TeMa/public/index.css">
+    <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         /* Estilos del Dashboard */
@@ -231,45 +237,11 @@ $user = $_SESSION['user'];
 
 <body>
 
-    <!-- Sidebar / Menú Lateral -->
-    <aside class="sidebar">
-        <div>
-            <div class="sidebar-header">
-                <img src="/Proyecto-TeMa/public/logo.png" alt="Logo">
-                <h3>Tentaciones Marlly</h3>
-            </div>
-            <ul class="menu-list">
-                <li class="active">
-                    <a href="/Proyecto-TeMa/view/dashboard.php">
-                        <i class="fa-solid fa-chart-line"></i> Dashboard
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fa-solid fa-box"></i> Inventario
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fa-solid fa-cart-shopping"></i> Ventas
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fa-solid fa-cart-shopping"></i> Compras
-                    </a>
-                </li>
-                <li>
-                    <a href="/Proyecto-TeMa/view/configuracion.php">
-                        <i class="fa-solid fa-gear"></i> Configuración
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <a href="/Proyecto-TeMa/index.php?action=logout" class="logout-btn">
-            <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
-        </a>
-    </aside>
+    <?php require_once __DIR__ . '/../helpers/sidebar.php'; ?>
+
+    <!-- Área de Contenido -->
+    <main class="main-content">
+
 
     <!-- Área de Contenido -->
     <main class="main-content">

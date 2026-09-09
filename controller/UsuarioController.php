@@ -27,12 +27,26 @@ class UsuarioController {
 
         if ($user) {
             $_SESSION['user'] = $user;
-            header("Location: /Proyecto-TeMa/view/dashboard.php");
-            exit();
+            $this->redirigirPorRol($user['rol']); // <-- cambio clave
         } else {
             header("Location: /Proyecto-TeMa/view/login.php?error=invalid_credentials");
             exit();
         }
+    }
+
+    private function redirigirPorRol($rol) {
+        switch (strtolower($rol)) {
+            case 'vendedor':
+            case 'cajero':
+                header("Location: /Proyecto-TeMa/view/pos.php");
+                break;
+            case 'administrador':
+                header("Location: /Proyecto-TeMa/view/dashboard.php");
+                break;
+            default:
+                header("Location: /Proyecto-TeMa/view/dashboard.php");
+        }
+        exit();
     }
 
     public function logout() {

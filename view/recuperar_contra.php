@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Recuperar contraseña</title>
-    <link rel="stylesheet" href="/Proyecto-TeMa/view/styles/recuperar_contra.css">
+    <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/recuperar_contra.css">
 </head>
 
 <body>

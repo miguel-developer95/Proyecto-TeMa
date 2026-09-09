@@ -30,7 +30,7 @@ $editDocumento = $_GET['edit_documento'] ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuración - Tentaciones Marlly</title>
-    <link rel="stylesheet" href="/Proyecto-TeMa/public/index.css">
+    <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         /* Estilos Base e idénticos al Dashboard */
@@ -279,41 +279,7 @@ $editDocumento = $_GET['edit_documento'] ?? '';
 
 <body>
 
-    <!-- Sidebar / Menú Lateral -->
-    <aside class="sidebar">
-        <div>
-            <div class="sidebar-header">
-                <img src="/Proyecto-TeMa/public/logo.png" alt="Logo">
-                <h3>Tentaciones Marlly</h3>
-            </div>
-
-            <ul class="menu-list">
-                <li>
-                    <a href="/Proyecto-TeMa/view/dashboard.php">
-                        <i class="fa-solid fa-chart-line"></i> Dashboard
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fa-solid fa-box"></i> Productos
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fa-solid fa-cart-shopping"></i> Ventas
-                    </a>
-                </li>
-                <li class="active">
-                    <a href="/Proyecto-TeMa/view/configuracion.php">
-                        <i class="fa-solid fa-gear"></i> Configuración
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <a href="/Proyecto-TeMa/index.php?action=logout" class="logout-btn">
-            <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
-        </a>
-    </aside>
+    <?php require_once __DIR__ . '/../helpers/sidebar.php'; ?>
 
     <!-- Contenido Principal -->
     <main class="main-content">

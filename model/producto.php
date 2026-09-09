@@ -1,17 +1,4 @@
 <?php
-/**
- * model/producto.php
- * Sistema de Registro e Inventario Ke-rico - Tentaciones Marlly
- *
- * Módulo: Inventario -> Productos
- * Cubre: RF 3.1 (registro de productos)
- *        RF 3.2 (modificación de productos)
- *        RF 3.3 (descontinuar producto - eliminación lógica)
- *        RF 3.4 (listado de productos y cantidad disponible)
- *        RF 3.5 (alerta de stock bajo)
- *
- * Patrón: MVC - Capa Modelo (acceso a datos con PDO)
- */
 
 require_once __DIR__ . '/conexion.php';
 
