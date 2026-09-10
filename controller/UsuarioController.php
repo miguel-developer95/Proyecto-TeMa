@@ -17,22 +17,43 @@ class UsuarioController {
         }
     }
 
-    public function login($username, $password) {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+public function login($username, $password) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-        $usuarioModel = new Usuario();
-        $user = $usuarioModel->login($username, $password);
+    $usuarioModel = new Usuario();
 
-        if ($user) {
-            $_SESSION['user'] = $user;
-            $this->redirigirPorRol($user['rol']); // <-- cambio clave
-        } else {
-            header("Location: /Proyecto-TeMa/view/login.php?error=invalid_credentials");
+    // 1. Verificar si la cuenta está bloqueada ANTES de validar la contraseña
+    $segundosRestantes = $usuarioModel->verificarBloqueo($username);
+    if ($segundosRestantes > 0) {
+        header("Location: /Proyecto-TeMa/view/login.php?error=locked&segundos=$segundosRestantes");
+        exit();
+    }
+
+    $user = $usuarioModel->login($username, $password);
+
+    if ($user) {
+        // 2. Login correcto: resetear contador de intentos
+        $usuarioModel->resetearIntentos($username);
+
+        $_SESSION['user'] = $user;
+        $this->redirigirPorRol($user['rol']); // <-- cambio clave
+    } else {
+        // 3. Login fallido: registrar intento
+        $usuarioModel->registrarIntentoFallido($username);
+
+        // Revisar si este intento fue el que activó el bloqueo (el 3ro)
+        $segundosRestantes = $usuarioModel->verificarBloqueo($username);
+        if ($segundosRestantes > 0) {
+            header("Location: /Proyecto-TeMa/view/login.php?error=locked&segundos=$segundosRestantes");
             exit();
         }
+
+        header("Location: /Proyecto-TeMa/view/login.php?error=invalid_credentials");
+        exit();
     }
+}
 
     private function redirigirPorRol($rol) {
         switch (strtolower($rol)) {

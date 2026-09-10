@@ -79,11 +79,68 @@ class Usuario
         }
     }
 
-    /**
-     * Builds a unique username from nombre + apellido + rol.
-     * Falls back to safe defaults if iconv fails or inputs are empty
-     * (common issue on some Windows/XAMPP setups).
-     */
+    // Verifica si la cuenta está bloqueada. Devuelve segundos restantes o 0 si no está bloqueada.
+    public function verificarBloqueo(string $username): int {
+    $sql = "SELECT bloqueado_hasta FROM usuarios WHERE (username = :username OR email = :username) AND estado = 'activo'";
+    $stmt = $this->db->prepare($sql);
+    $stmt->bindParam(':username', $username);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row && $row['bloqueado_hasta'] !== null) {
+        $ahora = new DateTime();
+        $hastaBloqueo = new DateTime($row['bloqueado_hasta']);
+
+        // DEBUG TEMPORAL
+        error_log("AHORA (PHP): " . $ahora->format('Y-m-d H:i:s'));
+        error_log("BLOQUEADO_HASTA (BD): " . $hastaBloqueo->format('Y-m-d H:i:s'));
+        error_log("COMPARACION ahora < hastaBloqueo: " . ($ahora < $hastaBloqueo ? 'TRUE' : 'FALSE'));
+
+        if ($ahora < $hastaBloqueo) {
+            return $hastaBloqueo->getTimestamp() - $ahora->getTimestamp();
+        }
+    }
+    return 0;
+    }
+
+    public function registrarIntentoFallido(string $username) {
+
+        $sql = "UPDATE usuarios 
+                SET intentos_fallidos = intentos_fallidos + 1 
+                WHERE (username = :username OR email = :username) AND estado = 'activo'";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':username', $username);
+        $stmt->execute();
+
+        $sql2 = "SELECT intentos_fallidos FROM usuarios WHERE (username = :username OR email = :username) AND estado = 'activo'";
+        $stmt2 = $this->db->prepare($sql2);
+        $stmt2->bindParam(':username', $username);
+        $stmt2->execute();
+        $row = $stmt2->fetch(PDO::FETCH_ASSOC);
+
+        if ($row && $row['intentos_fallidos'] >= 3) {
+            $sql3 = "UPDATE usuarios 
+                    SET bloqueado_hasta = DATE_ADD(NOW(), INTERVAL 1 MINUTE) 
+                    WHERE (username = :username OR email = :username) AND estado = 'activo'";
+
+            $stmt3 = $this->db->prepare($sql3);
+            $stmt3->bindParam(':username', $username);
+            $stmt3->execute();
+        }
+    }
+
+    public function resetearIntentos($username) {
+        $sql = "UPDATE usuarios 
+                SET intentos_fallidos = 0, bloqueado_hasta = NULL 
+                WHERE (username = :username OR email = :username) AND estado = 'activo'";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':username', $username);
+        $stmt->execute();
+    }
+
+
     private function generarUsername(
         string $nombre,
         string $apellido,

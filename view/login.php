@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('America/Bogota');
 // Deshabilitar la memoria caché del navegador
 header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
 header("Pragma: no-cache"); // HTTP 1.0
@@ -36,17 +37,17 @@ if (isset($_SESSION['user'])) {
             <p class="subtitle">Ingresa para continuar</p>
 
             <!-- Alertas dinámicas -->
-            <?php if (isset($_GET['status']) && $_GET['status'] === 'registered'): ?>
-                <p
-                    style="color: #2e7d32; background-color: #e8f5e9; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
-                    ¡Usuario registrado correctamente! Ya puedes iniciar sesión.
-                </p>
-            <?php endif; ?>
-
             <?php if (isset($_GET['error']) && $_GET['error'] === 'invalid_credentials'): ?>
                 <p
                     style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
                     Usuario o contraseña incorrectos.
+                </p>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'locked'): ?>
+                <p
+                    style="color: #e65100; background-color: #fff3e0; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    Cuenta bloqueada temporalmente. Intenta de nuevo en <?= (int)($_GET['segundos'] ?? 60) ?> segundos.
                 </p>
             <?php endif; ?>
 
