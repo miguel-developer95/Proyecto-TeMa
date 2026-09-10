@@ -45,9 +45,9 @@ if (isset($_SESSION['user'])) {
             <?php endif; ?>
 
             <?php if (isset($_GET['error']) && $_GET['error'] === 'locked'): ?>
-                <p
+                <p id="alertaBloqueo" data-segundos="<?= (int)($_GET['segundos'] ?? 60) ?>"
                     style="color: #e65100; background-color: #fff3e0; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
-                    Cuenta bloqueada temporalmente. Intenta de nuevo en <?= (int)($_GET['segundos'] ?? 60) ?> segundos.
+                    Cuenta bloqueada temporalmente. Intenta de nuevo en <span id="segundosRestantes"><?= (int)($_GET['segundos'] ?? 60) ?></span> segundos.
                 </p>
             <?php endif; ?>
 
@@ -80,6 +80,32 @@ if (isset($_SESSION['user'])) {
     </div>
 
     <script>
+        const alertaBloqueo = document.getElementById('alertaBloqueo');
+
+        if (alertaBloqueo) {
+            let segundos = parseInt(alertaBloqueo.dataset.segundos, 10);
+            const spanSegundos = document.getElementById('segundosRestantes');
+            const boton = document.querySelector('form button[type="submit"]');
+            const inputs = document.querySelectorAll('form input');
+
+            // Deshabilitar el formulario mientras dura el bloqueo
+            if (boton) boton.disabled = true;
+            inputs.forEach(input => input.disabled = true);
+
+            const intervalo = setInterval(() => {
+                segundos--;
+
+                if (segundos <= 0) {
+                    clearInterval(intervalo);
+                    // Recarga la página para limpiar el error y reactivar el formulario
+                    window.location.href = '/Proyecto-TeMa/view/login.php';
+                    return;
+                }
+
+                spanSegundos.textContent = segundos;
+            }, 1000);
+        }
+
         const toggleEye = document.getElementById('toggleEye');
         const password = document.getElementById('password');
 

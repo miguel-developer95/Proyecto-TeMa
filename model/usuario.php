@@ -81,26 +81,25 @@ class Usuario
 
     // Verifica si la cuenta está bloqueada. Devuelve segundos restantes o 0 si no está bloqueada.
     public function verificarBloqueo(string $username): int {
-    $sql = "SELECT bloqueado_hasta FROM usuarios WHERE (username = :username OR email = :username) AND estado = 'activo'";
-    $stmt = $this->db->prepare($sql);
-    $stmt->bindParam(':username', $username);
-    $stmt->execute();
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $sql = "SELECT bloqueado_hasta FROM usuarios WHERE (username = :username OR email = :username) AND estado = 'activo'";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':username', $username);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($row && $row['bloqueado_hasta'] !== null) {
-        $ahora = new DateTime();
-        $hastaBloqueo = new DateTime($row['bloqueado_hasta']);
+        if ($row && $row['bloqueado_hasta'] !== null) {
+            $ahora = new DateTime();
+            $hastaBloqueo = new DateTime($row['bloqueado_hasta']);
 
-        // DEBUG TEMPORAL
-        error_log("AHORA (PHP): " . $ahora->format('Y-m-d H:i:s'));
-        error_log("BLOQUEADO_HASTA (BD): " . $hastaBloqueo->format('Y-m-d H:i:s'));
-        error_log("COMPARACION ahora < hastaBloqueo: " . ($ahora < $hastaBloqueo ? 'TRUE' : 'FALSE'));
-
-        if ($ahora < $hastaBloqueo) {
-            return $hastaBloqueo->getTimestamp() - $ahora->getTimestamp();
+            if ($ahora < $hastaBloqueo) {
+                // Sigue bloqueada: devolver segundos restantes
+                return $hastaBloqueo->getTimestamp() - $ahora->getTimestamp();
+            } else {
+                // El bloqueo ya expiró: resetear el contador para dar 3 intentos nuevos
+                $this->resetearIntentos($username);
+            }
         }
-    }
-    return 0;
+        return 0;
     }
 
     public function registrarIntentoFallido(string $username) {
