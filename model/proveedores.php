@@ -1,59 +1,59 @@
 <?php
-
-require_once __DIR__ . '/conexion.php';
+// model/proveedores.php
+require_once __DIR__ . '/../config/connection.php';
 
 class Proveedores
 {
-    private PDO $pdo;
+    /** @var PDO */
+    private PDO $conn;
+    private string $tabla = 'proveedores';
 
     public function __construct()
     {
-        global $pdo;
-        $this->pdo = $pdo;
+        $this->conn = (new Connection())->conn;
     }
+
     /**
-     * Registra un nuevo proveedor.
+     * Registra un nuevo proveedor (RF 4.2).
      *
-     * @param array $datos Debe incluir: identificacion_nit, nombre_razon_social,
-     *                      direccion, telefono, correo_electronico
+     * @param array $datos Debe incluir: nom_proveedor, nit, direccion,
+     *                      telefono, correo_electronico
      * @return int Id del proveedor insertado.
      */
     public function registrarProveedor(array $datos): int
     {
-        $sql = "INSERT INTO PROVEEDORES (
-                    identificacion_nit, nombre_razon_social, direccion,
-                    telefono, correo_electronico, fecha_registro, estado
+        $sql = "INSERT INTO {$this->tabla} (
+                    nom_proveedor, nit, direccion, telefono, correo_electronico, estado
                 ) VALUES (
-                    :identificacionNit, :nombreRazonSocial, :direccion,
-                    :telefono, :correoElectronico, NOW(), 'activo'
+                    :nomProveedor, :nit, :direccion, :telefono, :correoElectronico, 'activo'
                 )";
 
-        $stmt = $this->pdo->prepare($sql);
+        $stmt = $this->conn->prepare($sql);
         $stmt->execute([
-            ':identificacionNit' => $datos['identificacion_nit'],
-            ':nombreRazonSocial' => $datos['nombre_razon_social'],
+            ':nomProveedor'      => $datos['nom_proveedor'],
+            ':nit'               => $datos['nit'],
             ':direccion'         => $datos['direccion'],
             ':telefono'          => $datos['telefono'],
             ':correoElectronico' => $datos['correo_electronico'],
         ]);
 
-        return (int) $this->pdo->lastInsertId();
+        return (int) $this->conn->lastInsertId();
     }
 
     /**
-     * Verifica si un NIT/identificación ya está registrado, para evitar duplicados.
+     * Verifica si un NIT ya está registrado, para evitar duplicados.
      */
-    public function existeIdentificacion(string $identificacionNit, ?int $idProveedorExcluir = null): bool
+    public function existeNit(string $nit, ?int $idProveedorExcluir = null): bool
     {
-        $sql = "SELECT COUNT(*) AS total FROM PROVEEDORES WHERE identificacion_nit = :identificacionNit";
-        $params = [':identificacionNit' => $identificacionNit];
+        $sql = "SELECT COUNT(*) AS total FROM {$this->tabla} WHERE nit = :nit";
+        $params = [':nit' => $nit];
 
         if ($idProveedorExcluir !== null) {
             $sql .= " AND id_proveedor != :idProveedorExcluir";
             $params[':idProveedorExcluir'] = $idProveedorExcluir;
         }
 
-        $stmt = $this->pdo->prepare($sql);
+        $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -65,16 +65,16 @@ class Proveedores
      */
     public function actualizarProveedor(int $idProveedor, array $datos): bool
     {
-        $sql = "UPDATE PROVEEDORES
-                SET nombre_razon_social = :nombreRazonSocial,
+        $sql = "UPDATE {$this->tabla}
+                SET nom_proveedor = :nomProveedor,
                     direccion = :direccion,
                     telefono = :telefono,
                     correo_electronico = :correoElectronico
                 WHERE id_proveedor = :idProveedor";
 
-        $stmt = $this->pdo->prepare($sql);
+        $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
-            ':nombreRazonSocial' => $datos['nombre_razon_social'],
+            ':nomProveedor'      => $datos['nom_proveedor'],
             ':direccion'         => $datos['direccion'],
             ':telefono'          => $datos['telefono'],
             ':correoElectronico' => $datos['correo_electronico'],
@@ -88,8 +88,8 @@ class Proveedores
      */
     public function desactivarProveedor(int $idProveedor): bool
     {
-        $sql = "UPDATE PROVEEDORES SET estado = 'inactivo' WHERE id_proveedor = :idProveedor";
-        $stmt = $this->pdo->prepare($sql);
+        $sql = "UPDATE {$this->tabla} SET estado = 'inactivo' WHERE id_proveedor = :idProveedor";
+        $stmt = $this->conn->prepare($sql);
         return $stmt->execute([':idProveedor' => $idProveedor]);
     }
 
@@ -98,8 +98,8 @@ class Proveedores
      */
     public function activarProveedor(int $idProveedor): bool
     {
-        $sql = "UPDATE PROVEEDORES SET estado = 'activo' WHERE id_proveedor = :idProveedor";
-        $stmt = $this->pdo->prepare($sql);
+        $sql = "UPDATE {$this->tabla} SET estado = 'activo' WHERE id_proveedor = :idProveedor";
+        $stmt = $this->conn->prepare($sql);
         return $stmt->execute([':idProveedor' => $idProveedor]);
     }
 
@@ -110,7 +110,7 @@ class Proveedores
      */
     public function listarProveedores(?string $estado = 'activo'): array
     {
-        $sql = "SELECT * FROM PROVEEDORES";
+        $sql = "SELECT * FROM {$this->tabla}";
         $params = [];
 
         if ($estado !== null) {
@@ -118,9 +118,9 @@ class Proveedores
             $params[':estado'] = $estado;
         }
 
-        $sql .= " ORDER BY nombre_razon_social ASC";
+        $sql .= " ORDER BY nom_proveedor ASC";
 
-        $stmt = $this->pdo->prepare($sql);
+        $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -131,8 +131,8 @@ class Proveedores
      */
     public function obtenerPorId(int $idProveedor): ?array
     {
-        $sql = "SELECT * FROM PROVEEDORES WHERE id_proveedor = :idProveedor";
-        $stmt = $this->pdo->prepare($sql);
+        $sql = "SELECT * FROM {$this->tabla} WHERE id_proveedor = :idProveedor";
+        $stmt = $this->conn->prepare($sql);
         $stmt->execute([':idProveedor' => $idProveedor]);
 
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -140,16 +140,16 @@ class Proveedores
     }
 
     /**
-     * Búsqueda de proveedores por nombre o razón social (para selección rápida
-     * al registrar una compra o un producto).
+     * Búsqueda de proveedores por nombre (para selección rápida al registrar
+     * una compra o un producto).
      */
     public function buscarPorNombre(string $texto): array
     {
-        $sql = "SELECT * FROM PROVEEDORES
-                WHERE nombre_razon_social LIKE :texto AND estado = 'activo'
-                ORDER BY nombre_razon_social ASC";
+        $sql = "SELECT * FROM {$this->tabla}
+                WHERE nom_proveedor LIKE :texto AND estado = 'activo'
+                ORDER BY nom_proveedor ASC";
 
-        $stmt = $this->pdo->prepare($sql);
+        $stmt = $this->conn->prepare($sql);
         $stmt->execute([':texto' => '%' . $texto . '%']);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
