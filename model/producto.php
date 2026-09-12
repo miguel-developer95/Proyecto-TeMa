@@ -1,238 +1,91 @@
 <?php
+class ProductoModel {
+    private $db;
 
-require_once __DIR__ . '/conexion.php';
-
-class Producto
-{
-    private PDO $pdo;
-
-    public function __construct()
-    {
-        global $pdo;
-        $this->pdo = $pdo;
+    public function __construct($databaseConnection) {
+        $this->db = $databaseConnection;
     }
 
-    /* =========================================================
-     * RF 3.1 - Registrar nuevo producto
-     * ========================================================= */
-
-    /**
-     * Registra un nuevo producto en el inventario.
-     *
-     * @param array $datos Debe incluir: codigo_barras, nombre, descripcion,
-     *                      categoria, precio_compra, precio_venta,
-     *                      cantidad_stock, stock_minimo, id_proveedor
-     * @return int Id del producto insertado.
-     */
-    public function registrarProducto(array $datos): int
-    {
-        $sql = "INSERT INTO PRODUCTOS (
-                    codigo_barras, nombre, descripcion, categoria,
-                    precio_compra, precio_venta, cantidad_stock, stock_minimo,
-                    id_proveedor, fecha_registro, estado
-                ) VALUES (
-                    :codigoBarras, :nombre, :descripcion, :categoria,
-                    :precioCompra, :precioVenta, :cantidadStock, :stockMinimo,
-                    :idProveedor, NOW(), 'activo'
-                )";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':codigoBarras'  => $datos['codigo_barras'],
-            ':nombre'        => $datos['nombre'],
-            ':descripcion'   => $datos['descripcion'],
-            ':categoria'     => $datos['categoria'],
-            ':precioCompra'  => $datos['precio_compra'],
-            ':precioVenta'   => $datos['precio_venta'],
-            ':cantidadStock' => $datos['cantidad_stock'],
-            ':stockMinimo'   => $datos['stock_minimo'],
-            ':idProveedor'   => $datos['id_proveedor'],
-        ]);
-
-        return (int) $this->pdo->lastInsertId();
+    // RF 3.1 & RI 3.1: Registrar nuevo producto
+    public function registrar($datos) {
+        $sql = "INSERT INTO producto 
+                (codigo_barras, nombre, descripcion, id_categoria, precio_compra, precio_venta, stock, stock_minimo, id_proveedor, estado) 
+                VALUES (:codigo_barras, :nombre, :descripcion, :id_categoria, :precio_compra, :precio_venta, :stock, :stock_minimo, :id_proveedor, 'activo')";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($datos);
     }
 
-    /**
-     * Verifica si un código de barras ya existe (para evitar duplicados
-     * al registrar o modificar un producto, según RI 3.2).
-     */
-    public function existeCodigoBarras(string $codigoBarras, ?int $idProductoExcluir = null): bool
-    {
-        $sql = "SELECT COUNT(*) AS total FROM PRODUCTOS WHERE codigo_barras = :codigoBarras";
-        $params = [':codigoBarras' => $codigoBarras];
+    // RF 3.2 & RI 3.2: Modificar producto + Trazabilidad
+    public function modificar($id_producto, $precio_compra, $precio_venta, $estado, $descripcion, $id_usuario) {
+        $this->db->beginTransaction();
+        try {
+            // Actualizar datos permitidos manteniendo código de barras intacto
+            $sql = "UPDATE producto 
+                    SET precio_compra = :precio_compra, 
+                        precio_venta = :precio_venta, 
+                        estado = :estado, 
+                        descripcion = :descripcion 
+                    WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':precio_compra' => $precio_compra,
+                ':precio_venta'  => $precio_venta,
+                ':estado'        => $estado,
+                ':descripcion'   => $descripcion,
+                ':id'            => $id_producto
+            ]);
 
-        if ($idProductoExcluir !== null) {
-            $sql .= " AND id_producto != :idProductoExcluir";
-            $params[':idProductoExcluir'] = $idProductoExcluir;
+            // Auditoría
+            $this->registrarAuditoria($id_producto, $id_usuario, 'MODIFICACION', "Se actualizó precio de compra, precio de venta, estado o descripción.");
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return false;
         }
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return (int) $resultado['total'] > 0;
     }
 
-    /* =========================================================
-     * RF 3.2 - Modificar producto registrado
-     * ========================================================= */
+    // RF 3.3 & RI 3.3: Descontinuar producto (Eliminación lógica)
+    public function descontinuar($id_producto, $id_usuario) {
+        $this->db->beginTransaction();
+        try {
+            $sql = "UPDATE producto SET estado = 'inactivo' WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':id' => $id_producto]);
 
-    /**
-     * Actualiza precio de compra, precio de venta, estado y descripción
-     * de un producto, registrando fecha de modificación y usuario responsable.
-     * El código de barras NO se modifica (RI 3.2).
-     */
-    public function actualizarProducto(
-        int $idProducto,
-        float $precioCompra,
-        float $precioVenta,
-        string $estado,
-        string $descripcion,
-        int $idUsuarioModificacion
-    ): bool {
-        $sql = "UPDATE PRODUCTOS
-                SET precio_compra = :precioCompra,
-                    precio_venta = :precioVenta,
-                    estado = :estado,
-                    descripcion = :descripcion,
-                    fecha_modificacion = NOW(),
-                    id_usuario_modificacion = :idUsuarioModificacion
-                WHERE id_producto = :idProducto";
+            // Auditoría del cambio de estado a inactivo
+            $this->registrarAuditoria($id_producto, $id_usuario, 'DESCONTINUACION', "Producto marcado como inactivo (descontinuado).");
 
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([
-            ':precioCompra'           => $precioCompra,
-            ':precioVenta'            => $precioVenta,
-            ':estado'                 => $estado,
-            ':descripcion'            => $descripcion,
-            ':idUsuarioModificacion'  => $idUsuarioModificacion,
-            ':idProducto'             => $idProducto,
-        ]);
-    }
-
-    /**
-     * Actualiza únicamente la cantidad en stock (usado por Ventas y Compras
-     * para descontar/reintegrar unidades - RF 5.2, RF 5.5 y RF 4.1).
-     *
-     * @param int $idProducto
-     * @param int $cantidad   Cantidad a sumar (positivo) o restar (negativo).
-     */
-    public function ajustarStock(int $idProducto, int $cantidad): bool
-    {
-        $sql = "UPDATE PRODUCTOS
-                SET cantidad_stock = cantidad_stock + :cantidad
-                WHERE id_producto = :idProducto";
-
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([
-            ':cantidad'   => $cantidad,
-            ':idProducto' => $idProducto,
-        ]);
-    }
-
-    /* =========================================================
-     * RF 3.3 - Descontinuar producto (eliminación lógica)
-     * ========================================================= */
-
-    /**
-     * Descontinúa un producto (estado = inactivo), registrando el usuario
-     * y la fecha de la acción, conservando el resto de su información
-     * para trazabilidad e informes históricos.
-     */
-    public function descontinuarProducto(int $idProducto, int $idUsuarioResponsable): bool
-    {
-        $sql = "UPDATE PRODUCTOS
-                SET estado = 'inactivo',
-                    fecha_modificacion = NOW(),
-                    id_usuario_modificacion = :idUsuarioResponsable
-                WHERE id_producto = :idProducto";
-
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([
-            ':idUsuarioResponsable' => $idUsuarioResponsable,
-            ':idProducto'           => $idProducto,
-        ]);
-    }
-
-    /* =========================================================
-     * RF 3.4 - Listado de productos y cantidad disponible
-     * ========================================================= */
-
-    /**
-     * Lista todos los productos con su información básica, incluyendo
-     * una bandera de alerta cuando el stock esté por debajo del mínimo.
-     *
-     * @param string|null $estado Filtra por 'activo' o 'inactivo'; null = todos.
-     */
-    public function listarProductos(?string $estado = 'activo'): array
-    {
-        $sql = "SELECT
-                    id_producto, codigo_barras, nombre, categoria,
-                    precio_venta, precio_compra, cantidad_stock, stock_minimo, estado,
-                    CASE WHEN cantidad_stock <= stock_minimo THEN 1 ELSE 0 END AS alerta_stock_bajo
-                FROM PRODUCTOS";
-
-        $params = [];
-        if ($estado !== null) {
-            $sql .= " WHERE estado = :estado";
-            $params[':estado'] = $estado;
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return false;
         }
-
-        $sql .= " ORDER BY nombre ASC";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Busca un producto por su código de barras (usado en el escaneo de Ventas).
-     */
-    public function obtenerPorCodigoBarras(string $codigoBarras): ?array
-    {
-        $sql = "SELECT * FROM PRODUCTOS WHERE codigo_barras = :codigoBarras AND estado = 'activo'";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':codigoBarras' => $codigoBarras]);
-
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $resultado ?: null;
-    }
-
-    /**
-     * Búsqueda manual de productos por nombre parcial (RF 5.1).
-     */
-    public function buscarPorNombre(string $texto): array
-    {
-        $sql = "SELECT * FROM PRODUCTOS
-                WHERE nombre LIKE :texto AND estado = 'activo'
-                ORDER BY nombre ASC";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':texto' => '%' . $texto . '%']);
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /* =========================================================
-     * RF 3.5 - Alerta de stock agotándose
-     * ========================================================= */
-
-    /**
-     * Devuelve los productos activos cuya cantidad en stock es igual o
-     * inferior al mínimo definido por el administrador.
-     */
-    public function productosConStockBajo(): array
-    {
-        $sql = "SELECT id_producto, codigo_barras, nombre, categoria, cantidad_stock, stock_minimo
-                FROM PRODUCTOS
-                WHERE estado = 'activo'
-                  AND cantidad_stock <= stock_minimo
-                ORDER BY cantidad_stock ASC";
-
-        $stmt = $this->pdo->prepare($sql);
+    // RF 3.4, RI 3.4 & RI 3.5: Listado con indicador de alerta de stock
+    public function listarTodos() {
+        $sql = "SELECT p.id, p.codigo_barras, p.nombre, p.precio_venta, p.precio_compra, 
+                       p.stock, p.stock_minimo, p.estado, c.nombre AS categoria,
+                       (p.stock <= p.stock_minimo) AS alerta_stock
+                FROM producto p
+                LEFT JOIN categoria c ON p.id_categoria = c.id";
+        $stmt = $this->db->prepare($sql);
         $stmt->execute();
-
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function registrarAuditoria($id_producto, $id_usuario, $accion, $detalles) {
+        $sql = "INSERT INTO historial_modificacion (id_producto, id_usuario, accion, detalles) 
+                VALUES (:id_producto, :id_usuario, :accion, :detalles)";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':id_producto' => $id_producto,
+            ':id_usuario'  => $id_usuario,
+            ':accion'      => $accion,
+            ':detalles'    => $detalles
+        ]);
     }
 }
