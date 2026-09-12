@@ -386,6 +386,7 @@ $editDocumento = $_GET['edit_documento'] ?? '';
             }
         });
     </script>
+    <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
 </body>
 
 </html>

@@ -308,6 +308,7 @@ $user = $_SESSION['user'];
             }
         });
     </script>
+    <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
 </body>
 
 </html>

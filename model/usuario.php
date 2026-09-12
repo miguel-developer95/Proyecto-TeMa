@@ -146,70 +146,81 @@ class Usuario
         string $rol
     ): string {
 
-        // Convertir a minúsculas y quitar espacios extra
-        $nombre = strtolower(trim($nombre));
-        $apellido = strtolower(trim($apellido));
+    // Convertir a minúsculas y quitar espacios extra
+    $nombre = strtolower(trim($nombre));
+    $apellido = strtolower(trim($apellido));
 
-        // Eliminar tildes (con respaldo si iconv falla, cosa común en Windows)
-        $nombreSinTildes = @iconv('UTF-8', 'ASCII//TRANSLIT', $nombre);
-        $apellidoSinTildes = @iconv('UTF-8', 'ASCII//TRANSLIT', $apellido);
+    // Eliminar tildes (con respaldo si iconv falla, cosa común en Windows)
+    $nombreSinTildes = @iconv('UTF-8', 'ASCII//TRANSLIT', $nombre);
+    $apellidoSinTildes = @iconv('UTF-8', 'ASCII//TRANSLIT', $apellido);
 
-        $nombre = ($nombreSinTildes !== false) ? $nombreSinTildes : $nombre;
-        $apellido = ($apellidoSinTildes !== false) ? $apellidoSinTildes : $apellido;
+    $nombre = ($nombreSinTildes !== false) ? $nombreSinTildes : $nombre;
+    $apellido = ($apellidoSinTildes !== false) ? $apellidoSinTildes : $apellido;
 
-        // Eliminar espacios y caracteres especiales
-        $nombre = preg_replace('/[^a-z0-9]/', '', $nombre);
-        $apellido = preg_replace('/[^a-z0-9]/', '', $apellido);
+    // Tomar solo la PRIMERA palabra de nombres/apellidos compuestos
+    // "juan carlos" -> "juan", "perez gomez" -> "perez"
+    $primerNombre = explode(' ', trim($nombre))[0] ?? '';
+    $primerApellido = explode(' ', trim($apellido))[0] ?? '';
 
-        // Nunca dejar el username vacío
-        if ($nombre === '') {
-            $nombre = 'user';
-        }
-        if ($apellido === '') {
-            $apellido = 'gen';
-        }
+    // Eliminar cualquier caracter especial restante
+    $primerNombre = preg_replace('/[^a-z0-9]/', '', $primerNombre);
+    $primerApellido = preg_replace('/[^a-z0-9]/', '', $primerApellido);
 
-        // Abreviaturas de los roles
-        $abreviaturas = [
-            'Administrador' => 'adm',
-            'Vendedor' => 'ven'
-        ];
-
-        $rolLimpio = trim($rol);
-        if ($rolLimpio === '') {
-            $abreviaturaRol = 'usr';
-        } else {
-            $abreviaturaRol = $abreviaturas[$rolLimpio] ?? strtolower(substr($rolLimpio, 0, 3));
-        }
-
-        // Crear nombre de usuario base
-        $usernameBase = $nombre . '.' . $apellido . '.' . $abreviaturaRol;
-
-        $username = $usernameBase;
-        $contador = 2;
-
-        while (true) {
-
-            $query = "SELECT COUNT(*) 
-                      FROM usuarios 
-                      WHERE username = :username";
-
-            $stmt = $this->db->prepare($query);
-
-            $stmt->execute([
-                ':username' => $username
-            ]);
-
-            $existe = $stmt->fetchColumn();
-
-            if ($existe == 0) {
-                return $username;
-            }
-
-            $username = $usernameBase . $contador;
-            $contador++;
-        }
+    // Nunca dejar el username vacío
+    if ($primerNombre === '') {
+        $primerNombre = 'usr';
     }
+    if ($primerApellido === '') {
+        $primerApellido = 'gen';
+    }
+
+    // Truncar a las primeras 3 letras
+    $primerNombre = substr($primerNombre, 0, 3);
+    $primerApellido = substr($primerApellido, 0, 3);
+
+    // Abreviaturas de los roles (comparación case-insensitive)
+    $rolLimpio = strtolower(trim($rol));
+
+    $abreviaturas = [
+        'administrador' => 'admin',
+        'vendedor'      => 'vend',
+        'cajero'        => 'vend',
+    ];
+
+    if ($rolLimpio === '') {
+        $abreviaturaRol = 'usr';
+    } else {
+        $abreviaturaRol = $abreviaturas[$rolLimpio] ?? substr($rolLimpio, 0, 4);
+    }
+
+    // Crear nombre de usuario base
+    $usernameBase = $primerNombre . '.' . $primerApellido . '.' . $abreviaturaRol;
+
+    $username = $usernameBase;
+    $contador = 2;
+
+    while (true) {
+
+        $query = "SELECT COUNT(*) 
+                  FROM usuarios 
+                  WHERE username = :username";
+
+        $stmt = $this->db->prepare($query);
+
+        $stmt->execute([
+            ':username' => $username
+        ]);
+
+        $existe = $stmt->fetchColumn();
+
+        if ($existe == 0) {
+            return $username;
+        }
+
+        $username = $usernameBase . $contador;
+        $contador++;
+    }
+}
 
     /**
      * Get total count of registered users.

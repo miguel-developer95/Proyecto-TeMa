@@ -1,3 +1,9 @@
+<?php if (isset($_GET['sesion_expirada'])): ?>
+    <div class="alerta alerta-info">
+        Tu sesión se cerró automáticamente por inactividad. Por favor, inicia sesión nuevamente.
+    </div>
+<?php endif; ?>
+
 <?php
 date_default_timezone_set('America/Bogota');
 // Deshabilitar la memoria caché del navegador

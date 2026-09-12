@@ -633,6 +633,7 @@ $metodosPago = $conn->query("SELECT id_pago, tipo_pago, nombre_empresa FROM meto
             }
         });
     </script>
+    <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
 </body>
 
 </html>

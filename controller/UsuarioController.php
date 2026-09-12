@@ -1,5 +1,5 @@
 <?php
-// controller/UsuarioController.php
+
 require_once __DIR__ . '/../model/usuario.php';
 
 class UsuarioController {
@@ -38,7 +38,8 @@ public function login($username, $password) {
         $usuarioModel->resetearIntentos($username);
 
         $_SESSION['user'] = $user;
-        $this->redirigirPorRol($user['rol']); // <-- cambio clave
+        $_SESSION['last_activity'] = time(); // iniciar el reloj de inactividad
+        $this->redirigirPorRol($user['rol']);
     } else {
         // 3. Login fallido: registrar intento
         $usuarioModel->registrarIntentoFallido($username);
