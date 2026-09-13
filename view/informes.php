@@ -24,8 +24,7 @@ $titulo = 'Informes';
 require __DIR__ . '/partials/head.php';
 ?>
 
-<h2>Informes</h2>
-<p class="muted">Ganancia real y rotación de productos.</p>
+<?php $subtituloNavbar = 'Ganancia real y rotación de productos.'; require __DIR__ . '/partials/navbar.php'; ?>
 
 <div class="crud-card">
     <form method="GET" class="form-grid">

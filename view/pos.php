@@ -36,8 +36,7 @@ $titulo = 'Ventas';
 require __DIR__ . '/partials/head.php';
 ?>
 
-<h2>Punto de Venta</h2>
-<p class="muted">Escanea el código de barras o busca el producto manualmente.</p>
+<?php $tituloNavbar = 'Punto de Venta'; $subtituloNavbar = 'Escanea el código de barras o busca el producto manualmente.'; require __DIR__ . '/partials/navbar.php'; ?>
 
 <div class="pos-grid">
     <div>

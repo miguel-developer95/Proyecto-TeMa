@@ -1,9 +1,25 @@
 -- =============================================================
--- Tentaciones Marlly · Esquema único de base de datos
--- Importar con phpMyAdmin (pestaña Importar) o:
---   mysql -u root < database/schema.sql
--- Convención: tablas en minúsculas y plural, PKs autoincrementales,
--- FKs con ON DELETE coherentes, borrado lógico con columna estado.
+-- Tentaciones Marlly · Esquema ÚNICO de base de datos (v2 consolidada)
+-- Este archivo crea TODO: las 14 tablas que usan los modelos.
+-- (Incluye lo que antes vivía en migrate_rf445256.sql: kardex y pausas.)
+--
+-- Instalación limpia (XAMPP, MariaDB 10.4):
+--   1. C:\xampp\mysql\bin\mysql.exe -u root < database\schema.sql
+--   2. C:\xampp\mysql\bin\mysql.exe -u root tentaciones_marlly < database\views.sql
+-- O con phpMyAdmin: pestaña Importar, primero schema.sql y luego views.sql.
+--
+-- Si tu BD ya existe de una versión anterior, aplica ADEMÁS:
+--   C:\xampp\mysql\bin\mysql.exe -u root tentaciones_marlly < database\migrate_rf445256.sql
+-- (idempotente: solo crea lo que falte).
+--
+-- CHARSET: cada tabla declara explícitamente
+--   ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+-- para que funcione aunque la BD haya sido creada antes con otro charset
+-- (p. ej. utf8 de 3 bytes o latin1, que rompen tildes/ñ/emojis).
+-- NO usar utf8mb4_0900_ai_ci (solo MySQL 8) ni utf8mb4_uca1400_ai_ci
+-- (solo MariaDB 10.6+): en el MariaDB 10.4 de este XAMPP dan error 1273
+-- "Unknown collation". utf8mb4_unicode_ci es el moderno válido aquí.
+-- El PDO ya pide charset=utf8mb4 en el DSN (config/Connection.php).
 -- =============================================================
 
 CREATE DATABASE IF NOT EXISTS tentaciones_marlly
@@ -24,7 +40,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   intentos_fallidos INT NOT NULL DEFAULT 0,
   bloqueado_hasta DATETIME NULL,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Proveedores (RF 4.2) ----------------
 CREATE TABLE IF NOT EXISTS proveedores (
@@ -36,7 +52,7 @@ CREATE TABLE IF NOT EXISTS proveedores (
   correo_electronico VARCHAR(120) NULL,
   estado ENUM('activo','inactivo') NOT NULL DEFAULT 'activo',
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Productos / Inventario (RF 3.x) ----------------
 CREATE TABLE IF NOT EXISTS productos (
@@ -60,7 +76,7 @@ CREATE TABLE IF NOT EXISTS productos (
     REFERENCES usuarios (id) ON DELETE SET NULL,
   INDEX idx_productos_nombre (nombre),
   INDEX idx_productos_categoria (categoria)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Clientes (ventas / recibos) ----------------
 CREATE TABLE IF NOT EXISTS clientes (
@@ -71,7 +87,7 @@ CREATE TABLE IF NOT EXISTS clientes (
   documento VARCHAR(30) NULL,
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_clientes_nombre (nombre)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Métodos de pago (RF 5.3) ----------------
 CREATE TABLE IF NOT EXISTS metodos_pago (
@@ -79,7 +95,7 @@ CREATE TABLE IF NOT EXISTS metodos_pago (
   nombre_metodo VARCHAR(60) NOT NULL,
   empresa VARCHAR(80) NULL,
   estado ENUM('activo','inactivo') NOT NULL DEFAULT 'activo'
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Ventas (RF 5.x) ----------------
 CREATE TABLE IF NOT EXISTS ventas (
@@ -103,7 +119,7 @@ CREATE TABLE IF NOT EXISTS ventas (
     REFERENCES metodos_pago (id_metodo_pago) ON DELETE SET NULL,
   INDEX idx_ventas_fecha (fecha),
   INDEX idx_ventas_estado (estado)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS detalle_ventas (
   id_venta INT NOT NULL,
@@ -115,7 +131,7 @@ CREATE TABLE IF NOT EXISTS detalle_ventas (
     REFERENCES ventas (id_venta) ON DELETE CASCADE,
   CONSTRAINT fk_dv_producto FOREIGN KEY (id_producto)
     REFERENCES productos (id_producto) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Compras (RF 4.x) ----------------
 CREATE TABLE IF NOT EXISTS compras (
@@ -133,7 +149,7 @@ CREATE TABLE IF NOT EXISTS compras (
   CONSTRAINT fk_compras_metodo FOREIGN KEY (id_metodo_pago)
     REFERENCES metodos_pago (id_metodo_pago) ON DELETE SET NULL,
   INDEX idx_compras_fecha (fecha_hora)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS detalle_compras (
   id_compra INT NOT NULL,
@@ -145,7 +161,7 @@ CREATE TABLE IF NOT EXISTS detalle_compras (
     REFERENCES compras (id_compra) ON DELETE CASCADE,
   CONSTRAINT fk_dc_producto FOREIGN KEY (id_producto)
     REFERENCES productos (id_producto) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Recuperación de contraseña (RF 1.5) ----------------
 CREATE TABLE IF NOT EXISTS password_resets (
@@ -158,7 +174,7 @@ CREATE TABLE IF NOT EXISTS password_resets (
   CONSTRAINT fk_resets_usuario FOREIGN KEY (id_usuario)
     REFERENCES usuarios (id) ON DELETE CASCADE,
   INDEX idx_resets_expira (expira_en)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Auditoría ----------------
 CREATE TABLE IF NOT EXISTS historial (
@@ -170,7 +186,7 @@ CREATE TABLE IF NOT EXISTS historial (
   CONSTRAINT fk_historial_usuario FOREIGN KEY (id_usuario)
     REFERENCES usuarios (id) ON DELETE SET NULL,
   INDEX idx_historial_fecha (fecha_accion)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------- Informes generados (RF 2.x) ----------------
 CREATE TABLE IF NOT EXISTS informes (
@@ -181,7 +197,52 @@ CREATE TABLE IF NOT EXISTS informes (
   id_usuario INT NULL,
   CONSTRAINT fk_informes_usuario FOREIGN KEY (id_usuario)
     REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------- Kardex de inventario (RF 5.2) ----------------
+-- (Antes solo en migrate_rf445256.sql; ahora parte del esquema único.)
+-- Entradas/salidas vinculadas a venta o compra para trazabilidad.
+CREATE TABLE IF NOT EXISTS movimientos_inventario (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_producto INT NOT NULL,
+  tipo ENUM('entrada','salida') NOT NULL,
+  cantidad INT NOT NULL,
+  stock_antes INT NOT NULL,
+  stock_despues INT NOT NULL,
+  id_venta INT NULL,
+  id_compra INT NULL,
+  motivo VARCHAR(255) NULL,
+  id_usuario INT NULL,
+  fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_mov_producto FOREIGN KEY (id_producto)
+    REFERENCES productos (id_producto) ON DELETE RESTRICT,
+  CONSTRAINT fk_mov_venta FOREIGN KEY (id_venta)
+    REFERENCES ventas (id_venta) ON DELETE SET NULL,
+  CONSTRAINT fk_mov_compra FOREIGN KEY (id_compra)
+    REFERENCES compras (id_compra) ON DELETE SET NULL,
+  CONSTRAINT fk_mov_usuario FOREIGN KEY (id_usuario)
+    REFERENCES usuarios (id) ON DELETE SET NULL,
+  INDEX idx_mov_prod_fecha (id_producto, fecha),
+  INDEX idx_mov_venta (id_venta),
+  INDEX idx_mov_compra (id_compra)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------- Ventas pausadas (RF 5.4) ----------------
+-- (Antes solo en migrate_rf445256.sql; ahora parte del esquema único.)
+-- Pausas múltiples persistentes. items es JSON (LONGTEXT en MariaDB 10.4).
+CREATE TABLE IF NOT EXISTS ventas_pausadas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  etiqueta VARCHAR(60) NOT NULL,
+  items JSON NOT NULL,
+  id_cliente INT NULL,
+  id_usuario INT NULL,
+  creada_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pausa_cliente FOREIGN KEY (id_cliente)
+    REFERENCES clientes (id_cliente) ON DELETE SET NULL,
+  CONSTRAINT fk_pausa_usuario FOREIGN KEY (id_usuario)
+    REFERENCES usuarios (id) ON DELETE SET NULL,
+  INDEX idx_pausa_usuario (id_usuario)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================
 -- Datos iniciales

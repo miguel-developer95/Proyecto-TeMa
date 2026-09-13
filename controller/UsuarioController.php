@@ -226,8 +226,19 @@ class UsuarioController
             $user = $this->model->obtenerPorEmail($email);
             if ($user) {
                 $token = $this->model->crearTokenReset((int) $user['id']);
-                $link = base_url('view/restablecer.php?token=' . urlencode($token));
-                // Sin servidor de correo en este entorno: en modo local se muestra el enlace.
+                // En el correo el enlace debe ser ABSOLUTO (uno relativo no abre fuera del sitio).
+                $link = base_url_abs('view/restablecer.php?token=' . urlencode($token));
+                // Intento de envío real (restaurado de bda5c73, saneado vía .env).
+                $mailer = __DIR__ . '/../helpers/mailer_recuperacion.php';
+                if (is_file($mailer)) {
+                    require_once $mailer;
+                    $nombre = (string) ($user['nombre'] ?? $user['username'] ?? 'usuario');
+                    if (mailerConfigurado() && enviarCorreoRecuperacion($email, $nombre, $link)) {
+                        flash('success', 'Si el correo está registrado, recibirás un enlace de recuperación válido por 1 hora.');
+                        redirect('view/recuperar.php');
+                    }
+                }
+                // Fallback local (comportamiento de 677f89f): sin SMTP se muestra el enlace.
                 if (APP_DEBUG) {
                     flash('info', 'Enlace de recuperación (modo local): ' . $link);
                 }

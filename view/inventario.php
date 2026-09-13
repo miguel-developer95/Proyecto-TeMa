@@ -21,8 +21,7 @@ $titulo = 'Inventario';
 require __DIR__ . '/partials/head.php';
 ?>
 
-<h2>Inventario</h2>
-<p class="muted">Gestiona los productos de la tienda.</p>
+<?php $subtituloNavbar = 'Gestiona los productos de la tienda.'; require __DIR__ . '/partials/navbar.php'; ?>
 
 <div class="toolbar">
     <form method="GET" class="search-form">

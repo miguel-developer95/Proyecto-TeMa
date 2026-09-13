@@ -26,8 +26,7 @@ if ($idProd > 0) {
 require __DIR__ . '/partials/head.php';
 ?>
 
-<h2>Kardex — Historial de movimientos</h2>
-<p class="muted">Entradas y salidas de inventario vinculadas a compras y ventas.</p>
+<?php $tituloNavbar = 'Kardex — Historial de movimientos'; $subtituloNavbar = 'Entradas y salidas de inventario vinculadas a compras y ventas.'; require __DIR__ . '/partials/navbar.php'; ?>
 
 <div class="crud-card">
     <form method="GET" class="form-grid">

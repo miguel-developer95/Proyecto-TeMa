@@ -48,8 +48,7 @@ $titulo = 'Compras';
 require __DIR__ . '/partials/head.php';
 ?>
 
-<h2>Compras</h2>
-<p class="muted">Registro de compras a proveedores con actualización de stock.</p>
+<?php $subtituloNavbar = 'Registro de compras a proveedores con actualización de stock.'; require __DIR__ . '/partials/navbar.php'; ?>
 
 <div class="toolbar">
     <div></div>

@@ -18,8 +18,7 @@ $titulo = 'Proveedores';
 require __DIR__ . '/partials/head.php';
 ?>
 
-<h2>Proveedores</h2>
-<p class="muted">Registro y mantenimiento de proveedores.</p>
+<?php $subtituloNavbar = 'Registro y mantenimiento de proveedores.'; require __DIR__ . '/partials/navbar.php'; ?>
 
 <div class="toolbar">
     <div></div>

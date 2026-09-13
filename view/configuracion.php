@@ -22,8 +22,7 @@ $titulo = 'Configuración';
 require __DIR__ . '/partials/head.php';
 ?>
 
-<h2>Gestión de Usuarios</h2>
-<p class="muted">Total: <strong><?= e($totalUsuarios) ?></strong> · Activos: <strong><?= e($totalActivos) ?></strong> · Inactivos: <strong><?= e($totalInactivos) ?></strong></p>
+<?php $tituloNavbar = 'Gestión de Usuarios'; $subtituloNavbar = "Total: {$totalUsuarios} · Activos: {$totalActivos} · Inactivos: {$totalInactivos}"; require __DIR__ . '/partials/navbar.php'; ?>
 
 <div class="toolbar">
     <div></div>

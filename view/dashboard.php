@@ -18,13 +18,7 @@ $titulo = 'Dashboard';
 require __DIR__ . '/partials/head.php';
 ?>
 
-<header class="top-navbar">
-    <h2>Panel de Control</h2>
-    <div class="user-profile">
-        <div class="user-avatar"><?= e(strtoupper(mb_substr((string) $user['username'], 0, 1))) ?></div>
-        <span>¡Hola, <strong><?= e($user['username']) ?></strong>!</span>
-    </div>
-</header>
+<?php $tituloNavbar = 'Panel de Control'; require __DIR__ . '/partials/navbar.php'; ?>
 
 <section class="cards-grid">
     <div class="card">

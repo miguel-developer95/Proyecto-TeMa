@@ -8,6 +8,25 @@ function base_url(string $path = ''): string
     return BASE_URL . ($path === '' ? '' : '/' . $path);
 }
 
+/**
+ * URL ABSOLUTA (con esquema y host) para usar en correos.
+ * En web usa el host de la petición; en CLI usa APP_URL del .env.
+ */
+function base_url_abs(string $path = ''): string
+{
+    $rel = base_url($path);
+    $appUrl = rtrim(env('APP_URL', ''), '/');
+    if ($appUrl !== '') {
+        return $appUrl . $rel;
+    }
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? '');
+    if ($host === '') {
+        $host = 'localhost';
+    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    return $scheme . '://' . $host . $rel;
+}
+
 function redirect(string $path): void
 {
     header('Location: ' . base_url($path));
