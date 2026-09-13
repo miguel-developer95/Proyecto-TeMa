@@ -1,23 +1,6 @@
 <?php
-// recuperar_contraseña.php
+date_default_timezone_set('America/Bogota');
 session_start();
-
-// Si el formulario fue enviado
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email']);
-
-    if (!empty($email)) {
-        // Aquí normalmente buscarías el usuario en la BD
-        // y enviarías un correo con un enlace de recuperación.
-        // Por ahora solo simulamos el proceso.
-        $_SESSION['mensaje'] = "Se ha enviado un enlace de recuperación a $email";
-    } else {
-        $_SESSION['mensaje'] = "Por favor ingresa un correo válido.";
-    }
-
-    header("Location: recuperar_contraseña.php");
-    exit;
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -31,15 +14,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="container">
         <h2>Recuperar contraseña</h2>
-        <form method="POST" action="">
+
+        <?php if (isset($_GET['status']) && $_GET['status'] === 'enviado'): ?>
+            <p class="mensaje" style="color:#2e7d32;background:#e8f5e9;padding:10px;border-radius:5px;">
+                Si el correo está registrado, recibirás un enlace de recuperación en unos minutos.
+            </p>
+        <?php endif; ?>
+
+        <?php if (isset($_GET['error']) && $_GET['error'] === 'token_invalido'): ?>
+            <p class="mensaje" style="color:#c62828;background:#ffebee;padding:10px;border-radius:5px;">
+                El enlace de recuperación no es válido o ya expiró. Solicita uno nuevo.
+            </p>
+        <?php endif; ?>
+
+        <form method="POST" action="/Proyecto-TeMa/index.php">
+            <input type="hidden" name="action" value="solicitar_recuperacion">
             <label for="email">Ingresa tu correo:</label>
             <input type="email" name="email" id="email" required>
             <button type="submit">Enviar enlace</button>
         </form>
-        <?php if (isset($_SESSION['mensaje'])): ?>
-            <p class="mensaje"><?php echo $_SESSION['mensaje'];
-                                unset($_SESSION['mensaje']); ?></p>
-        <?php endif; ?>
     </div>
 </body>
 

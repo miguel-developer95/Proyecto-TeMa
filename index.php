@@ -56,6 +56,16 @@ elseif ($action === 'toggle_estado') {
         $controller->cambiarEstado($id);
     }
 }
+elseif ($action === 'solicitar_recuperacion' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = $_POST['email'] ?? '';
+    $controller->solicitarRecuperacion($email);
+}
+elseif ($action === 'restablecer_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $token = $_POST['token'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $passwordConfirmar = $_POST['password_confirmar'] ?? '';
+    $controller->restablecerPassword($token, $password, $passwordConfirmar);
+}
 elseif ($action === 'logout') {
     $controller->logout();
 }

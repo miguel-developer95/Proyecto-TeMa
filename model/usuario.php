@@ -293,7 +293,7 @@ class Usuario
         $stmt->bindParam(":id", $id);
         return $stmt->execute();
     }
-
+    
         /**
      * Alterna el estado del usuario entre 'activo' e 'inactivo'.
      */
@@ -319,5 +319,87 @@ class Usuario
         $stmt2->bindParam(':estado', $nuevoEstado);
         $stmt2->bindParam(':id', $id);
         return $stmt2->execute();
+    }
+
+    // ===== A PARTIR DE AQUÍ: recuperación de contraseña =====
+
+    /**
+     * Genera un token de recuperación y lo guarda con expiración de 30 minutos.
+     * Devuelve el token en texto plano (para el link) y datos del usuario, o null si el correo no existe.
+     */
+    public function generarTokenRecuperacion(string $email): ?array
+    {
+        $query = "SELECT id, nombre, email FROM usuarios WHERE email = :email AND estado = 'activo'";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            return null;
+        }
+
+        // Token en texto plano (va en el link del correo)
+        $tokenPlano = bin2hex(random_bytes(32));
+
+        // Solo el hash se guarda en la BD
+        $tokenHash = hash('sha256', $tokenPlano);
+
+        $expira = date('Y-m-d H:i:s', time() + 1800); // 30 minutos
+
+        $update = "UPDATE usuarios SET reset_token = :hash, reset_token_expira = :expira WHERE id = :id";
+        $stmtUpdate = $this->db->prepare($update);
+        $stmtUpdate->bindParam(':hash', $tokenHash);
+        $stmtUpdate->bindParam(':expira', $expira);
+        $stmtUpdate->bindParam(':id', $user['id']);
+        $stmtUpdate->execute();
+
+        return [
+            'token'  => $tokenPlano,
+            'nombre' => $user['nombre'],
+            'email'  => $user['email'],
+        ];
+    }
+
+    /**
+     * Valida un token de recuperación. Devuelve el id del usuario si es válido
+     * y no ha expirado, o false en caso contrario.
+     */
+    public function validarTokenRecuperacion(string $token)
+    {
+        $hash = hash('sha256', $token);
+
+        $query = "SELECT id, reset_token_expira FROM usuarios WHERE reset_token = :hash AND estado = 'activo'";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':hash', $hash);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return false;
+        }
+
+        $expira = new DateTime($row['reset_token_expira']);
+        $ahora = new DateTime();
+
+        if ($ahora > $expira) {
+            return false; // Token expirado
+        }
+
+        return (int) $row['id'];
+    }
+
+    /**
+     * Actualiza la contraseña del usuario y limpia el token (uso único).
+     */
+    public function restablecerPassword(int $id, string $nuevaPassword): bool
+    {
+        $hash = password_hash($nuevaPassword, PASSWORD_BCRYPT);
+
+        $query = "UPDATE usuarios SET password = :password, reset_token = NULL, reset_token_expira = NULL WHERE id = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':password', $hash);
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
     }
 }

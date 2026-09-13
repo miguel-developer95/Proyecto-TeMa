@@ -97,6 +97,45 @@ class UsuarioController {
         exit();
     }
 
+    public function solicitarRecuperacion($email) {
+        require_once __DIR__ . '/../helpers/mailer_recuperacion.php'; // <-- cambio aquí
+
+        $usuarioModel = new Usuario();
+        $datos = $usuarioModel->generarTokenRecuperacion($email);
+
+        if ($datos) {
+            $link = "http://localhost/Proyecto-TeMa/view/recuperar_contra.php?token=" . $datos['token'];
+            enviarCorreoRecuperacion($datos['email'], $datos['nombre'], $link);
+        }
+
+        header("Location: /Proyecto-TeMa/view/recuperar_contra.php?status=enviado");
+        exit();
+    }
+
+    public function restablecerPassword($token, $password, $passwordConfirmar) {
+        if ($password !== $passwordConfirmar) {
+            header("Location: /Proyecto-TeMa/view/recuperar_contra.php?token=" . urlencode($token) . "&error=no_coincide");
+            exit();
+        }
+
+        if (strlen($password) < 6) {
+            header("Location: /Proyecto-TeMa/view/recuperar_contra.php?token=" . urlencode($token) . "&error=muy_corta");
+            exit();
+        }
+
+        $usuarioModel = new Usuario();
+        $id = $usuarioModel->validarTokenRecuperacion($token);
+
+        if (!$id) {
+            header("Location: /Proyecto-TeMa/view/recuperar_contra.php?error=token_invalido");
+            exit();
+        }
+
+        $usuarioModel->restablecerPassword($id, $password);
+        header("Location: /Proyecto-TeMa/view/login.php?status=password_actualizada");
+        exit();
+    }
+
     public function eliminar($id) {
         $usuarioModel = new Usuario();
         if ($usuarioModel->eliminar($id)) {
