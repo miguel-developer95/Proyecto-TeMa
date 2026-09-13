@@ -349,6 +349,8 @@ $editDocumento = $_GET['edit_documento'] ?? '';
                         <th>Nombre de Usuario</th>
                         <th>Correo</th>
                         <th>No. Documento</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -358,9 +360,25 @@ $editDocumento = $_GET['edit_documento'] ?? '';
                             <td>#<?php echo $u['id']; ?></td>
                             <td><strong><?php echo htmlspecialchars($u['username']); ?></strong></td>
                             <td><?php echo htmlspecialchars($u['email'] ?? $u['correo_electronico'] ?? 'Sin correo'); ?></td>
-                            <td><?php echo htmlspecialchars($u['documento'] ?? 'N/A'); ?></td>
+                            <td><?php echo htmlspecialchars($u['documento'] ?? $u['No.Documento'] ?? 'N/A'); ?></td>
+                            <td><?php echo htmlspecialchars($u['rol'] ?? 'N/A'); ?></td>
                             <td>
-                                <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? ''); ?>" class="action-btn btn-edit">
+                                <?php if (($u['estado'] ?? '') === 'activo'): ?>
+                                    <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
+                                    onclick="return confirm('¿Desactivar a este usuario? No podrá iniciar sesión mientras esté inactivo.');"
+                                    class="action-btn btn-deactivate">
+                                        <i class="fa-solid fa-user-slash"></i> Desactivar
+                                    </a>
+                                <?php else: ?>
+                                    <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
+                                    onclick="return confirm('¿Activar a este usuario? Podrá volver a iniciar sesión.');"
+                                    class="action-btn btn-activate">
+                                        <i class="fa-solid fa-user-check"></i> Activar
+                                    </a>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? $u['No.Documento'] ?? ''); ?>&edit_rol=<?php echo urlencode($u['rol'] ?? ''); ?>&edit_estado=<?php echo urlencode($u['estado'] ?? ''); ?>" class="action-btn btn-edit">
                                     <i class="fa-solid fa-pen"></i> Editar
                                 </a>
                                 <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este usuario?');" class="action-btn btn-delete">

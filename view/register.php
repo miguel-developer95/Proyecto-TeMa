@@ -58,7 +58,7 @@ if (isset($_SESSION['user'])) {
                     <input type="text" name="apellido" placeholder="Apellido" required>
                 </div>
 
-                <div class="input-group">
+                <div class="input-group1"> 
                     <i class="fa-solid fa-id-badge"></i>
                     <select name="rol" required>
                         <option value="">Selecciona un rol</option>

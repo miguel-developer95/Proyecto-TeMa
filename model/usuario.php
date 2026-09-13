@@ -43,7 +43,7 @@ class Usuario
         string $password,
         ?string $email = null,
         ?string $documento = null
-    ): bool {
+    ) {
         try {
 
             // Generar automáticamente el nombre de usuario
@@ -67,7 +67,10 @@ class Usuario
             $stmt->bindParam(":email", $email);
             $stmt->bindParam(":documento", $documento);
 
-            return $stmt->execute();
+            $exito = $stmt->execute();
+
+            // Devolver el username generado en éxito, o false en fallo
+            return $exito ? $username : false;
 
         } catch (PDOException $e) {
 
@@ -146,81 +149,77 @@ class Usuario
         string $rol
     ): string {
 
-    // Convertir a minúsculas y quitar espacios extra
-    $nombre = strtolower(trim($nombre));
-    $apellido = strtolower(trim($apellido));
+        // Convertir a minúsculas y quitar espacios extra
+        $nombre = strtolower(trim($nombre));
+        $apellido = strtolower(trim($apellido));
 
-    // Eliminar tildes (con respaldo si iconv falla, cosa común en Windows)
-    $nombreSinTildes = @iconv('UTF-8', 'ASCII//TRANSLIT', $nombre);
-    $apellidoSinTildes = @iconv('UTF-8', 'ASCII//TRANSLIT', $apellido);
+        // Eliminar tildes de forma manual (más confiable que iconv en Windows/XAMPP)
+        $nombre = $this->quitarAcentos($nombre);
+        $apellido = $this->quitarAcentos($apellido);
 
-    $nombre = ($nombreSinTildes !== false) ? $nombreSinTildes : $nombre;
-    $apellido = ($apellidoSinTildes !== false) ? $apellidoSinTildes : $apellido;
+        // Tomar solo la PRIMERA palabra de nombres/apellidos compuestos
+        $primerNombre = explode(' ', trim($nombre))[0] ?? '';
+        $primerApellido = explode(' ', trim($apellido))[0] ?? '';
 
-    // Tomar solo la PRIMERA palabra de nombres/apellidos compuestos
-    // "juan carlos" -> "juan", "perez gomez" -> "perez"
-    $primerNombre = explode(' ', trim($nombre))[0] ?? '';
-    $primerApellido = explode(' ', trim($apellido))[0] ?? '';
+        // Limpiar caracteres especiales de CADA PARTE POR SEPARADO
+        // (nunca del string ya unido con puntos, o se pierden los puntos)
+        $primerNombre = preg_replace('/[^a-z0-9]/', '', $primerNombre);
+        $primerApellido = preg_replace('/[^a-z0-9]/', '', $primerApellido);
 
-    // Eliminar cualquier caracter especial restante
-    $primerNombre = preg_replace('/[^a-z0-9]/', '', $primerNombre);
-    $primerApellido = preg_replace('/[^a-z0-9]/', '', $primerApellido);
-
-    // Nunca dejar el username vacío
-    if ($primerNombre === '') {
-        $primerNombre = 'usr';
-    }
-    if ($primerApellido === '') {
-        $primerApellido = 'gen';
-    }
-
-    // Truncar a las primeras 3 letras
-    $primerNombre = substr($primerNombre, 0, 3);
-    $primerApellido = substr($primerApellido, 0, 3);
-
-    // Abreviaturas de los roles (comparación case-insensitive)
-    $rolLimpio = strtolower(trim($rol));
-
-    $abreviaturas = [
-        'administrador' => 'admin',
-        'vendedor'      => 'vend',
-        'cajero'        => 'vend',
-    ];
-
-    if ($rolLimpio === '') {
-        $abreviaturaRol = 'usr';
-    } else {
-        $abreviaturaRol = $abreviaturas[$rolLimpio] ?? substr($rolLimpio, 0, 4);
-    }
-
-    // Crear nombre de usuario base
-    $usernameBase = $primerNombre . '.' . $primerApellido . '.' . $abreviaturaRol;
-
-    $username = $usernameBase;
-    $contador = 2;
-
-    while (true) {
-
-        $query = "SELECT COUNT(*) 
-                  FROM usuarios 
-                  WHERE username = :username";
-
-        $stmt = $this->db->prepare($query);
-
-        $stmt->execute([
-            ':username' => $username
-        ]);
-
-        $existe = $stmt->fetchColumn();
-
-        if ($existe == 0) {
-            return $username;
+        if ($primerNombre === '') {
+            $primerNombre = 'usr';
+        }
+        if ($primerApellido === '') {
+            $primerApellido = 'gen';
         }
 
-        $username = $usernameBase . $contador;
-        $contador++;
+        // Truncar a las primeras 3 letras
+        $primerNombre = substr($primerNombre, 0, 3);
+        $primerApellido = substr($primerApellido, 0, 3);
+
+        // Abreviaturas de los roles (comparación case-insensitive)
+        $rolLimpio = strtolower(trim($rol));
+
+        $abreviaturas = [
+            'administrador' => 'admin',
+            'vendedor'      => 'vend',
+        ];
+
+        if ($rolLimpio === '') {
+            $abreviaturaRol = 'usr';
+        } else {
+            $abreviaturaRol = $abreviaturas[$rolLimpio] ?? substr($rolLimpio, 0, 4);
+        }
+
+        // Concatenar CON los puntos como paso final — nada debe tocar
+        // este string después de este punto
+        $usernameBase = $primerNombre . '.' . $primerApellido . '.' . $abreviaturaRol;
+
+        $username = $usernameBase;
+        $contador = 2;
+
+        while (true) {
+            $query = "SELECT COUNT(*) FROM usuarios WHERE username = :username";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':username' => $username]);
+            $existe = $stmt->fetchColumn();
+
+            if ($existe == 0) {
+                return $username;
+            }
+
+            $username = $usernameBase . $contador;
+            $contador++;
+        }
     }
-}
+
+    private function quitarAcentos(string $texto): string {
+        $buscar     = ['á','é','í','ó','ú','à','è','ì','ò','ù','ä','ë','ï','ö','ü','ñ',
+                    'Á','É','Í','Ó','Ú','À','È','Ì','Ò','Ù','Ä','Ë','Ï','Ö','Ü','Ñ'];
+        $reemplazar = ['a','e','i','o','u','a','e','i','o','u','a','e','i','o','u','n',
+                    'A','E','I','O','U','A','E','I','O','U','A','E','I','O','U','N'];
+        return str_replace($buscar, $reemplazar, $texto);
+    }
 
     /**
      * Get total count of registered users.
@@ -239,7 +238,7 @@ class Usuario
      */
     public function obtenerTodos(): array
     {
-        $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento` FROM usuarios ORDER BY id DESC";
+        $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento`, rol, estado FROM usuarios ORDER BY id DESC";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -252,7 +251,7 @@ class Usuario
      */
     public function obtenerPorId(int $id)
     {
-        $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento` FROM usuarios WHERE id = :id";
+        $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento`, rol, estado FROM usuarios WHERE id = :id";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":id", $id);
         $stmt->execute();
@@ -293,5 +292,32 @@ class Usuario
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":id", $id);
         return $stmt->execute();
+    }
+
+        /**
+     * Alterna el estado del usuario entre 'activo' e 'inactivo'.
+     */
+    public function cambiarEstado(int $id): bool
+    {
+        // 1. Obtener el estado actual
+        $query = "SELECT estado FROM usuarios WHERE id = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return false;
+        }
+
+        // 2. Calcular el nuevo estado (invertido)
+        $nuevoEstado = ($row['estado'] === 'activo') ? 'inactivo' : 'activo';
+
+        // 3. Actualizar
+        $query2 = "UPDATE usuarios SET estado = :estado WHERE id = :id";
+        $stmt2 = $this->db->prepare($query2);
+        $stmt2->bindParam(':estado', $nuevoEstado);
+        $stmt2->bindParam(':id', $id);
+        return $stmt2->execute();
     }
 }

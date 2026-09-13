@@ -50,6 +50,13 @@ if (isset($_SESSION['user'])) {
                 </p>
             <?php endif; ?>
 
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'inactive'): ?>
+                <p
+                    style="color: #e65100; background-color: #fff3e0; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    Tu cuenta está inactiva. Contacta al administrador para más información.
+                </p>
+            <?php endif; ?>
+
             <?php if (isset($_GET['error']) && $_GET['error'] === 'locked'): ?>
                 <p id="alertaBloqueo" data-segundos="<?= (int)($_GET['segundos'] ?? 60) ?>"
                     style="color: #e65100; background-color: #fff3e0; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">

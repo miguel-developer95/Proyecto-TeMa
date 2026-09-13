@@ -41,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 unset($_SESSION['mensaje']); ?></p>
         <?php endif; ?>
     </div>
-    <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
 </body>
 
 </html>

@@ -50,9 +50,15 @@ elseif ($action === 'delete_user') {
         $controller->eliminar($id);
     }
 } 
+elseif ($action === 'toggle_estado') {
+    $id = $_GET['id'] ?? null;
+    if ($id) {
+        $controller->cambiarEstado($id);
+    }
+}
 elseif ($action === 'logout') {
     $controller->logout();
-} 
+}
 else {
     // Si el usuario ya inició sesión, redirigir al dashboard en lugar del login
     if (isset($_SESSION['user'])) {

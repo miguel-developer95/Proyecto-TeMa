@@ -11,7 +11,6 @@ verificarRol(['vendedor', 'cajero', 'administrador']);
 </head>
 <body>
     <h1>hello POS</h1>
-    Añadir función para que el sistema recorte el nombre, el apellido (a las primeras 3 letras) y el rol del usuario (si es administrador: admin, si es vendedor: vend) para hacer mas corto el username y que se vea mejor en la interfaz de usuario. Por ejemplo, si el nombre es "Juan Carlos", el apellido es "Pérez Gómez", el correo electrónico es "juan.perez@example.com", el rol es "vendedor", entonces el username sería "juaperadmin" o algo similar.
     <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
 </body>
 </html>
