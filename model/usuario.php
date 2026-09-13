@@ -1,10 +1,13 @@
 <?php
-// model/usuario.php
-require_once __DIR__ . '/../config/connection.php';
+declare(strict_types=1);
 
+require_once __DIR__ . '/../config/Connection.php';
+
+/**
+ * Modelo de usuarios. Tabla: usuarios.
+ */
 class Usuario
 {
-    /** @var PDO */
     private PDO $db;
 
     public function __construct()
@@ -12,29 +15,25 @@ class Usuario
         $this->db = (new Connection())->conn;
     }
 
-    /**
-     * Verify user login credentials (supports username or email).
-     * 
-     * @return array|false Returns user associative array if verified, false otherwise.
-     */
+    /** Login con username o email. Retorna el usuario o false. */
     public function login(string $username, string $password)
     {
-        $query = "SELECT * FROM usuarios WHERE username = :username OR email = :username";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(":username", $username);
-        $stmt->execute();
+        $stmt = $this->db->prepare(
+            "SELECT * FROM usuarios
+             WHERE (username = :u1 OR email = :u2) AND estado = 'activo' LIMIT 1"
+        );
+        $stmt->execute([':u1' => $username, ':u2' => $username]);
+        $user = $stmt->fetch();
 
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($user && password_verify($password, $user['password'])) {
             return $user;
         }
-
         return false;
     }
 
     /**
-     * Register a new user record.
-     * Generates the username automatically from nombre + apellido + rol.
+     * Registra un usuario generando el username automáticamente.
+     * Retorna ['ok'=>bool, 'username'=>?string].
      */
     public function registrar(
         string $nombre,
@@ -43,363 +42,284 @@ class Usuario
         string $password,
         ?string $email = null,
         ?string $documento = null
-    ) {
+    ): array {
         try {
+            $email = ($email !== null && trim($email) !== '') ? trim($email) : null;
+            $documento = ($documento !== null && trim($documento) !== '') ? trim($documento) : null;
 
-            // Generar automáticamente el nombre de usuario
-            $username = $this->generarUsername($nombre, $apellido, $rol);
-
-            // Encriptar contraseña
-            $hash = password_hash($password, PASSWORD_BCRYPT);
-
-            $query = "INSERT INTO usuarios 
-                    (nombre, apellido, rol, username, password, email, documento) 
-                    VALUES 
-                    (:nombre, :apellido, :rol, :username, :password, :email, :documento)";
-
-            $stmt = $this->db->prepare($query);
-
-            $stmt->bindParam(":nombre", $nombre);
-            $stmt->bindParam(":apellido", $apellido);
-            $stmt->bindParam(":rol", $rol);
-            $stmt->bindParam(":username", $username);
-            $stmt->bindParam(":password", $hash);
-            $stmt->bindParam(":email", $email);
-            $stmt->bindParam(":documento", $documento);
-
-            $exito = $stmt->execute();
-
-            // Devolver el username generado en éxito, o false en fallo
-            return $exito ? $username : false;
-
-        } catch (PDOException $e) {
-
-            if ($e->getCode() == 23000) {
-                return false;
+            if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return ['ok' => false, 'error' => 'Correo electrónico inválido.'];
             }
 
+            $username = $this->generarUsername($nombre, $apellido, $rol);
+            $hash = password_hash($password, PASSWORD_BCRYPT);
+
+            $stmt = $this->db->prepare(
+                "INSERT INTO usuarios (nombre, apellido, rol, username, password, email, documento)
+                 VALUES (:nombre, :apellido, :rol, :username, :password, :email, :documento)"
+            );
+            $stmt->execute([
+                ':nombre' => trim($nombre),
+                ':apellido' => trim($apellido),
+                ':rol' => trim($rol),
+                ':username' => $username,
+                ':password' => $hash,
+                ':email' => $email,
+                ':documento' => $documento,
+            ]);
+            return ['ok' => true, 'username' => $username];
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                return ['ok' => false, 'error' => 'El correo o documento ya está registrado.'];
+            }
             throw $e;
         }
     }
 
-    // Verifica si la cuenta está bloqueada. Devuelve segundos restantes o 0 si no está bloqueada.
-    public function verificarBloqueo(string $username): int {
-        $sql = "SELECT bloqueado_hasta FROM usuarios WHERE (username = :username OR email = :username) AND estado = 'activo'";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':username', $username);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    /* ---------- Bloqueo temporal (RF 1.7) ---------- */
+
+    /** Segundos restantes de bloqueo, 0 si no está bloqueada. */
+    public function verificarBloqueo(string $username): int
+    {
+        $stmt = $this->db->prepare(
+            "SELECT bloqueado_hasta FROM usuarios
+             WHERE (username = :u1 OR email = :u2) AND estado = 'activo' LIMIT 1"
+        );
+        $stmt->execute([':u1' => $username, ':u2' => $username]);
+        $row = $stmt->fetch();
 
         if ($row && $row['bloqueado_hasta'] !== null) {
-            $ahora = new DateTime();
-            $hastaBloqueo = new DateTime($row['bloqueado_hasta']);
-
-            if ($ahora < $hastaBloqueo) {
-                // Sigue bloqueada: devolver segundos restantes
-                return $hastaBloqueo->getTimestamp() - $ahora->getTimestamp();
-            } else {
-                // El bloqueo ya expiró: resetear el contador para dar 3 intentos nuevos
+            try {
+                $ahora = new DateTime();
+                $hasta = new DateTime($row['bloqueado_hasta']);
+                if ($ahora < $hasta) {
+                    return $hasta->getTimestamp() - $ahora->getTimestamp();
+                }
                 $this->resetearIntentos($username);
+            } catch (Exception $e) {
+                return 0;
             }
         }
         return 0;
     }
 
-    public function registrarIntentoFallido(string $username) {
-
-        $sql = "UPDATE usuarios 
-                SET intentos_fallidos = intentos_fallidos + 1 
-                WHERE (username = :username OR email = :username) AND estado = 'activo'";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':username', $username);
-        $stmt->execute();
-
-        $sql2 = "SELECT intentos_fallidos FROM usuarios WHERE (username = :username OR email = :username) AND estado = 'activo'";
-        $stmt2 = $this->db->prepare($sql2);
-        $stmt2->bindParam(':username', $username);
-        $stmt2->execute();
-        $row = $stmt2->fetch(PDO::FETCH_ASSOC);
-
-        if ($row && $row['intentos_fallidos'] >= 3) {
-            $sql3 = "UPDATE usuarios 
-                    SET bloqueado_hasta = DATE_ADD(NOW(), INTERVAL 1 MINUTE) 
-                    WHERE (username = :username OR email = :username) AND estado = 'activo'";
-
-            $stmt3 = $this->db->prepare($sql3);
-            $stmt3->bindParam(':username', $username);
-            $stmt3->execute();
-        }
-    }
-
-    public function resetearIntentos($username) {
-        $sql = "UPDATE usuarios 
-                SET intentos_fallidos = 0, bloqueado_hasta = NULL 
-                WHERE (username = :username OR email = :username) AND estado = 'activo'";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':username', $username);
-        $stmt->execute();
-    }
-
-
-    private function generarUsername(
-        string $nombre,
-        string $apellido,
-        string $rol
-    ): string {
-
-        // Convertir a minúsculas y quitar espacios extra
-        $nombre = strtolower(trim($nombre));
-        $apellido = strtolower(trim($apellido));
-
-        // Eliminar tildes de forma manual (más confiable que iconv en Windows/XAMPP)
-        $nombre = $this->quitarAcentos($nombre);
-        $apellido = $this->quitarAcentos($apellido);
-
-        // Tomar solo la PRIMERA palabra de nombres/apellidos compuestos
-        $primerNombre = explode(' ', trim($nombre))[0] ?? '';
-        $primerApellido = explode(' ', trim($apellido))[0] ?? '';
-
-        // Limpiar caracteres especiales de CADA PARTE POR SEPARADO
-        // (nunca del string ya unido con puntos, o se pierden los puntos)
-        $primerNombre = preg_replace('/[^a-z0-9]/', '', $primerNombre);
-        $primerApellido = preg_replace('/[^a-z0-9]/', '', $primerApellido);
-
-        if ($primerNombre === '') {
-            $primerNombre = 'usr';
-        }
-        if ($primerApellido === '') {
-            $primerApellido = 'gen';
-        }
-
-        // Truncar a las primeras 3 letras
-        $primerNombre = substr($primerNombre, 0, 3);
-        $primerApellido = substr($primerApellido, 0, 3);
-
-        // Abreviaturas de los roles (comparación case-insensitive)
-        $rolLimpio = strtolower(trim($rol));
-
-        $abreviaturas = [
-            'administrador' => 'admin',
-            'vendedor'      => 'vend',
-        ];
-
-        if ($rolLimpio === '') {
-            $abreviaturaRol = 'usr';
-        } else {
-            $abreviaturaRol = $abreviaturas[$rolLimpio] ?? substr($rolLimpio, 0, 4);
-        }
-
-        // Concatenar CON los puntos como paso final — nada debe tocar
-        // este string después de este punto
-        $usernameBase = $primerNombre . '.' . $primerApellido . '.' . $abreviaturaRol;
-
-        $username = $usernameBase;
-        $contador = 2;
-
-        while (true) {
-            $query = "SELECT COUNT(*) FROM usuarios WHERE username = :username";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([':username' => $username]);
-            $existe = $stmt->fetchColumn();
-
-            if ($existe == 0) {
-                return $username;
-            }
-
-            $username = $usernameBase . $contador;
-            $contador++;
-        }
-    }
-
-    private function quitarAcentos(string $texto): string {
-        $buscar     = ['á','é','í','ó','ú','à','è','ì','ò','ù','ä','ë','ï','ö','ü','ñ',
-                    'Á','É','Í','Ó','Ú','À','È','Ì','Ò','Ù','Ä','Ë','Ï','Ö','Ü','Ñ'];
-        $reemplazar = ['a','e','i','o','u','a','e','i','o','u','a','e','i','o','u','n',
-                    'A','E','I','O','U','A','E','I','O','U','A','E','I','O','U','N'];
-        return str_replace($buscar, $reemplazar, $texto);
-    }
-
-    /**
-     * Get total count of registered users.
-     */
-    public function contarUsuarios(): int
+    public function registrarIntentoFallido(string $username): void
     {
-        $query = "SELECT COUNT(*) as total FROM usuarios";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int) ($result['total'] ?? 0);
+        $stmt = $this->db->prepare(
+            "UPDATE usuarios SET intentos_fallidos = intentos_fallidos + 1
+             WHERE (username = :u1 OR email = :u2) AND estado = 'activo'"
+        );
+        $stmt->execute([':u1' => $username, ':u2' => $username]);
+
+        $stmt = $this->db->prepare(
+            "SELECT intentos_fallidos FROM usuarios
+             WHERE (username = :u1 OR email = :u2) AND estado = 'activo' LIMIT 1"
+        );
+        $stmt->execute([':u1' => $username, ':u2' => $username]);
+        $row = $stmt->fetch();
+
+        if ($row && (int) $row['intentos_fallidos'] >= LOCKOUT_ATTEMPTS) {
+            $stmt = $this->db->prepare(
+                "UPDATE usuarios SET bloqueado_hasta = DATE_ADD(NOW(), INTERVAL " . LOCKOUT_MINUTES . " MINUTE)
+                 WHERE (username = :u1 OR email = :u2) AND estado = 'activo'"
+            );
+            $stmt->execute([':u1' => $username, ':u2' => $username]);
+        }
     }
 
-    /**
-     * Fetch all users securely from the database.
-     */
-    public function obtenerTodos(): array
+    public function resetearIntentos(string $username): void
     {
-        $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento`, rol, estado FROM usuarios ORDER BY id DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $this->db->prepare(
+            "UPDATE usuarios SET intentos_fallidos = 0, bloqueado_hasta = NULL
+             WHERE (username = :u1 OR email = :u2) AND estado = 'activo'"
+        );
+        $stmt->execute([':u1' => $username, ':u2' => $username]);
     }
 
-    /**
-     * Fetch a specific user by ID.
-     * 
-     * @return array|false Returns user associative array if found, false otherwise.
-     */
-    public function obtenerPorId(int $id)
+    /* ---------- Recuperación de contraseña (RF 1.5) ---------- */
+
+    public function obtenerPorEmail(string $email)
     {
-        $query = "SELECT id, username, email AS correo_electronico, documento AS `No.Documento`, rol, estado FROM usuarios WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(":id", $id);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->db->prepare(
+            "SELECT * FROM usuarios WHERE email = :email AND estado = 'activo' LIMIT 1"
+        );
+        $stmt->execute([':email' => trim($email)]);
+        return $stmt->fetch();
     }
 
-    /**
-     * Update user details.
-     */
-    public function actualizar(int $id, string $username, ?string $email = null, ?string $documento = null, ?string $password = null): bool
+    /** Crea un token de restablecimiento (válido 1 hora). Retorna el token plano. */
+    public function crearTokenReset(int $idUsuario): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $stmt = $this->db->prepare(
+            "INSERT INTO password_resets (id_usuario, token_hash, expira_en)
+             VALUES (:id, :hash, DATE_ADD(NOW(), INTERVAL 1 HOUR))"
+        );
+        $stmt->execute([':id' => $idUsuario, ':hash' => hash('sha256', $token)]);
+        return $token;
+    }
+
+    /** Valida el token y cambia la clave. Retorna true/false. */
+    public function restablecerConToken(string $token, string $nuevaClave): bool
     {
         try {
-            if (!empty($password)) {
-                $hash = password_hash($password, PASSWORD_BCRYPT);
-                $query = "UPDATE usuarios SET username = :username, email = :email, documento = :documento, password = :password WHERE id = :id";
-                $stmt = $this->db->prepare($query);
-                $stmt->bindParam(":password", $hash);
-            } else {
-                $query = "UPDATE usuarios SET username = :username, email = :email, documento = :documento WHERE id = :id";
-                $stmt = $this->db->prepare($query);
+            $this->db->beginTransaction();
+            $stmt = $this->db->prepare(
+                "SELECT id, id_usuario, expira_en, usado_en FROM password_resets
+                 WHERE token_hash = :hash LIMIT 1"
+            );
+            $stmt->execute([':hash' => hash('sha256', $token)]);
+            $row = $stmt->fetch();
+
+            if (!$row || $row['usado_en'] !== null || new DateTime($row['expira_en']) < new DateTime()) {
+                $this->db->rollBack();
+                return false;
             }
-            $stmt->bindParam(":username", $username);
-            $stmt->bindParam(":email", $email);
-            $stmt->bindParam(":documento", $documento);
-            $stmt->bindParam(":id", $id);
-            return $stmt->execute();
+
+            $stmt = $this->db->prepare("UPDATE usuarios SET password = :p WHERE id = :id");
+            $stmt->execute([':p' => password_hash($nuevaClave, PASSWORD_BCRYPT), ':id' => $row['id_usuario']]);
+
+            $stmt = $this->db->prepare("UPDATE password_resets SET usado_en = NOW() WHERE id = :id");
+            $stmt->execute([':id' => $row['id']]);
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return false;
+        }
+    }
+
+    /* ---------- Administración ---------- */
+
+    public function contarUsuarios(): int
+    {
+        return (int) $this->db->query("SELECT COUNT(*) FROM usuarios")->fetchColumn();
+    }
+
+    public function contarAdminsActivos(): int
+    {
+        return (int) $this->db->query(
+            "SELECT COUNT(*) FROM usuarios WHERE rol = 'Administrador' AND estado = 'activo'"
+        )->fetchColumn();
+    }
+
+    public function obtenerTodos(): array
+    {
+        return $this->listar(null);
+    }
+
+    /** Lista por estado (igual que Proveedor::listar). null = todos. */
+    public function listar(?string $estado = 'activo'): array
+    {
+        $sql = "SELECT id, nombre, apellido, username, rol, email, documento, estado, creado_en
+             FROM usuarios";
+        $params = [];
+        if ($estado !== null) {
+            $sql .= " WHERE estado = :e";
+            $params[':e'] = $estado;
+        }
+        $sql .= " ORDER BY id DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function contarPorEstado(string $estado): int
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM usuarios WHERE estado = :e");
+        $stmt->execute([':e' => $estado]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function obtenerPorId(int $id)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT id, nombre, apellido, username, rol, email, documento, estado
+             FROM usuarios WHERE id = :id LIMIT 1"
+        );
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch();
+    }
+
+    /** Actualización completa (ya no borra email/documento). */
+    public function actualizar(int $id, array $datos): bool
+    {
+        try {
+            $sql = "UPDATE usuarios SET nombre = :nombre, apellido = :apellido, rol = :rol,
+                    username = :username, email = :email, documento = :documento, estado = :estado";
+            $params = [
+                ':nombre' => trim((string) ($datos['nombre'] ?? '')),
+                ':apellido' => trim((string) ($datos['apellido'] ?? '')),
+                ':rol' => trim((string) ($datos['rol'] ?? 'Vendedor')),
+                ':username' => trim((string) ($datos['username'] ?? '')),
+                ':email' => ($datos['email'] ?? null) ?: null,
+                ':documento' => ($datos['documento'] ?? null) ?: null,
+                ':estado' => ($datos['estado'] ?? 'activo') === 'inactivo' ? 'inactivo' : 'activo',
+                ':id' => $id,
+            ];
+            if (!empty($datos['password'])) {
+                $sql .= ", password = :password";
+                $params[':password'] = password_hash((string) $datos['password'], PASSWORD_BCRYPT);
+            }
+            $sql .= " WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute($params);
         } catch (PDOException $e) {
             return false;
         }
     }
 
-    /**
-     * Delete a user by ID.
-     */
     public function eliminar(int $id): bool
     {
-        $query = "DELETE FROM usuarios WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(":id", $id);
-        return $stmt->execute();
-    }
-    
-        /**
-     * Alterna el estado del usuario entre 'activo' e 'inactivo'.
-     */
-    public function cambiarEstado(int $id): bool
-    {
-        // 1. Obtener el estado actual
-        $query = "SELECT estado FROM usuarios WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$row) {
-            return false;
+        try {
+            $stmt = $this->db->prepare("DELETE FROM usuarios WHERE id = :id");
+            return $stmt->execute([':id' => $id]);
+        } catch (PDOException $e) {
+            return false; // p. ej. tiene ventas asociadas (FK RESTRICT)
         }
-
-        // 2. Calcular el nuevo estado (invertido)
-        $nuevoEstado = ($row['estado'] === 'activo') ? 'inactivo' : 'activo';
-
-        // 3. Actualizar
-        $query2 = "UPDATE usuarios SET estado = :estado WHERE id = :id";
-        $stmt2 = $this->db->prepare($query2);
-        $stmt2->bindParam(':estado', $nuevoEstado);
-        $stmt2->bindParam(':id', $id);
-        return $stmt2->execute();
     }
 
-    // ===== A PARTIR DE AQUÍ: recuperación de contraseña =====
-
-    /**
-     * Genera un token de recuperación y lo guarda con expiración de 30 minutos.
-     * Devuelve el token en texto plano (para el link) y datos del usuario, o null si el correo no existe.
-     */
-    public function generarTokenRecuperacion(string $email): ?array
+    /** Activa/desactiva sin borrar (conserva trazabilidad). */
+    public function cambiarEstado(int $id, string $estado): bool
     {
-        $query = "SELECT id, nombre, email FROM usuarios WHERE email = :email AND estado = 'activo'";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$user) {
-            return null;
-        }
-
-        // Token en texto plano (va en el link del correo)
-        $tokenPlano = bin2hex(random_bytes(32));
-
-        // Solo el hash se guarda en la BD
-        $tokenHash = hash('sha256', $tokenPlano);
-
-        $expira = date('Y-m-d H:i:s', time() + 1800); // 30 minutos
-
-        $update = "UPDATE usuarios SET reset_token = :hash, reset_token_expira = :expira WHERE id = :id";
-        $stmtUpdate = $this->db->prepare($update);
-        $stmtUpdate->bindParam(':hash', $tokenHash);
-        $stmtUpdate->bindParam(':expira', $expira);
-        $stmtUpdate->bindParam(':id', $user['id']);
-        $stmtUpdate->execute();
-
-        return [
-            'token'  => $tokenPlano,
-            'nombre' => $user['nombre'],
-            'email'  => $user['email'],
-        ];
+        $estado = $estado === 'inactivo' ? 'inactivo' : 'activo';
+        $stmt = $this->db->prepare("UPDATE usuarios SET estado = :e WHERE id = :id");
+        return $stmt->execute([':e' => $estado, ':id' => $id]);
     }
 
-    /**
-     * Valida un token de recuperación. Devuelve el id del usuario si es válido
-     * y no ha expirado, o false en caso contrario.
-     */
-    public function validarTokenRecuperacion(string $token)
+    /* ---------- Utilidades ---------- */
+
+    private function generarUsername(string $nombre, string $apellido, string $rol): string
     {
-        $hash = hash('sha256', $token);
+        $nombre = mb_strtolower(trim($nombre), "UTF-8");
+        $apellido = mb_strtolower(trim($apellido), "UTF-8");
 
-        $query = "SELECT id, reset_token_expira FROM usuarios WHERE reset_token = :hash AND estado = 'activo'";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':hash', $hash);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $sinTildesN = @iconv('UTF-8', 'ASCII//TRANSLIT', $nombre);
+        $sinTildesA = @iconv('UTF-8', 'ASCII//TRANSLIT', $apellido);
+        $nombre = $sinTildesN !== false ? $sinTildesN : $nombre;
+        $apellido = $sinTildesA !== false ? $sinTildesA : $apellido;
 
-        if (!$row) {
-            return false;
+        $nombre = preg_replace('/[^a-z0-9]/', '', $nombre) ?: 'user';
+        $apellido = preg_replace('/[^a-z0-9]/', '', $apellido) ?: 'gen';
+
+        $abreviaturas = ['Administrador' => 'adm', 'Vendedor' => 'ven'];
+        $rolLimpio = trim($rol);
+        $abr = $rolLimpio === '' ? 'usr' : ($abreviaturas[$rolLimpio] ?? mb_strtolower(mb_substr($rolLimpio, 0, 3, "UTF-8"), "UTF-8"));
+
+        $base = $nombre . '.' . $apellido . '.' . $abr;
+        $username = $base;
+        $n = 2;
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM usuarios WHERE username = :u");
+        while (true) {
+            $stmt->execute([':u' => $username]);
+            if ((int) $stmt->fetchColumn() === 0) {
+                return $username;
+            }
+            $username = $base . $n;
+            $n++;
         }
-
-        $expira = new DateTime($row['reset_token_expira']);
-        $ahora = new DateTime();
-
-        if ($ahora > $expira) {
-            return false; // Token expirado
-        }
-
-        return (int) $row['id'];
-    }
-
-    /**
-     * Actualiza la contraseña del usuario y limpia el token (uso único).
-     */
-    public function restablecerPassword(int $id, string $nuevaPassword): bool
-    {
-        $hash = password_hash($nuevaPassword, PASSWORD_BCRYPT);
-
-        $query = "UPDATE usuarios SET password = :password, reset_token = NULL, reset_token_expira = NULL WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':password', $hash);
-        $stmt->bindParam(':id', $id);
-        return $stmt->execute();
     }
 }

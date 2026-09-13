@@ -1,163 +1,259 @@
 <?php
+declare(strict_types=1);
 
 require_once __DIR__ . '/../model/usuario.php';
+require_once __DIR__ . '/../model/historial.php';
 
-class UsuarioController {
+class UsuarioController
+{
+    private Usuario $model;
+    private Historial $historial;
 
-    public function registrar($nombre, $apellido, $rol, $password, $email = null, $documento = null) {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $usuarioModel = new Usuario();
-        $usernameGenerado = $usuarioModel->registrar($nombre, $apellido, $rol, $password, $email, $documento);
-
-        if ($usernameGenerado !== false) {
-            // Guardar temporalmente en sesión para mostrarlo en la pantalla de confirmación
-            $_SESSION['registro_exitoso'] = [
-                'username' => $usernameGenerado,
-                'password' => $password, // texto plano SOLO para esta pantalla, nunca se guarda así en BD
-            ];
-
-            header("Location: /Proyecto-TeMa/view/registro_exitoso.php");
-            exit();
-        } else {
-            header("Location: /Proyecto-TeMa/view/register.php?error=user_exists");
-            exit();
-        }
+    public function __construct()
+    {
+        $this->model = new Usuario();
+        $this->historial = new Historial();
     }
 
-    public function login($username, $password) {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+    public function registrar(): void
+    {
+        $nombre = trim((string) post('nombre'));
+        $apellido = trim((string) post('apellido'));
+        $rol = trim((string) post('rol'));
+        $email = trim((string) post('email'));
+        $documento = trim((string) post('documento'));
+        $password = (string) post('password');
+        $confirm = (string) post('password_confirm');
+
+        if ($nombre === '' || $apellido === '' || $rol === '' || $email === '' || $documento === '' || $password === '') {
+            flash('error', 'Todos los campos son obligatorios.');
+            redirect('view/register.php');
+        }
+        if (!in_array($rol, ['Administrador', 'Vendedor'], true)) {
+            flash('error', 'Rol inválido.');
+            redirect('view/register.php');
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            flash('error', 'Correo electrónico inválido.');
+            redirect('view/register.php');
+        }
+        if (mb_strlen($password) < PASSWORD_MIN_LENGTH) {
+            flash('error', 'La contraseña debe tener al menos ' . PASSWORD_MIN_LENGTH . ' caracteres.');
+            redirect('view/register.php');
+        }
+        if ($password !== $confirm) {
+            flash('error', 'Las contraseñas no coinciden.');
+            redirect('view/register.php');
         }
 
-        $usuarioModel = new Usuario();
+        $res = $this->model->registrar($nombre, $apellido, $rol, $password, $email, $documento);
+        if ($res['ok']) {
+            $this->historial->registrar('registro_usuario', 'Registro: ' . $res['username'], null);
+            flash('success', 'Cuenta creada. Tu nombre de usuario es: ' . $res['username']);
+            redirect('view/login.php?status=registered');
+        }
+        flash('error', $res['error'] ?? 'No se pudo crear la cuenta. Verifica los datos.');
+        redirect('view/register.php');
+    }
 
-        // 1. Verificar si la cuenta está bloqueada ANTES de validar la contraseña
-        $segundosRestantes = $usuarioModel->verificarBloqueo($username);
-        if ($segundosRestantes > 0) {
-            header("Location: /Proyecto-TeMa/view/login.php?error=locked&segundos=$segundosRestantes");
-            exit();
+    public function login(): void
+    {
+        $username = trim((string) post('username'));
+        $password = (string) post('password');
+
+        if ($username === '' || $password === '') {
+            redirect('view/login.php?error=invalid_credentials');
         }
 
-        $user = $usuarioModel->login($username, $password);
+        // RF 1.7: bloqueo temporal antes de validar la clave
+        $segundos = $this->model->verificarBloqueo($username);
+        if ($segundos > 0) {
+            redirect('view/login.php?error=locked&segundos=' . $segundos);
+        }
 
+        $user = $this->model->login($username, $password);
         if ($user) {
+            $this->model->resetearIntentos($username);
+            login_user($user);
+            redirect_by_role();
+        }
 
-            // AGREGAR AQUÍ: verificar que la cuenta esté activa
-            if (($user['estado'] ?? 'activo') !== 'activo') {
-                header("Location: /Proyecto-TeMa/view/login.php?error=inactive");
-                exit();
+        $this->model->registrarIntentoFallido($username);
+        $segundos = $this->model->verificarBloqueo($username);
+        if ($segundos > 0) {
+            redirect('view/login.php?error=locked&segundos=' . $segundos);
+        }
+        redirect('view/login.php?error=invalid_credentials');
+    }
+
+    public function logout(): void
+    {
+        logout_user();
+        redirect('view/login.php');
+    }
+
+    /** Admin: crear o actualizar usuario desde Configuración. */
+    public function guardar(): void
+    {
+        $id = (int) post('id');
+        $datos = [
+            'nombre' => trim((string) post('nombre')),
+            'apellido' => trim((string) post('apellido')),
+            'rol' => trim((string) post('rol')),
+            'username' => trim((string) post('username')),
+            'email' => trim((string) post('email')) ?: null,
+            'documento' => trim((string) post('documento')) ?: null,
+            'estado' => post('estado') === 'inactivo' ? 'inactivo' : 'activo',
+            'password' => (string) post('password'),
+        ];
+
+        if ($datos['nombre'] === '' || $datos['username'] === '') {
+            flash('error', 'Nombre y nombre de usuario son obligatorios.');
+            redirect('view/configuracion.php');
+        }
+        if (!in_array($datos['rol'], ['Administrador', 'Vendedor'], true)) {
+            flash('error', 'Rol inválido.');
+            redirect('view/configuracion.php');
+        }
+        if ($datos['email'] !== null && !filter_var($datos['email'], FILTER_VALIDATE_EMAIL)) {
+            flash('error', 'Correo electrónico inválido.');
+            redirect('view/configuracion.php');
+        }
+        if ($datos['password'] !== '' && mb_strlen($datos['password']) < PASSWORD_MIN_LENGTH) {
+            flash('error', 'La contraseña debe tener al menos ' . PASSWORD_MIN_LENGTH . ' caracteres.');
+            redirect('view/configuracion.php');
+        }
+
+        // Proteger al último administrador activo
+        if ($id > 0) {
+            $actual = $this->model->obtenerPorId($id);
+            if ($actual && $actual['rol'] === 'Administrador'
+                && ($datos['rol'] !== 'Administrador' || $datos['estado'] === 'inactivo')
+                && $this->model->contarAdminsActivos() <= 1) {
+                flash('error', 'No puedes degradar o desactivar al último administrador activo.');
+                redirect('view/configuracion.php');
             }
-
-            // 2. Login correcto: resetear contador de intentos
-            $usuarioModel->resetearIntentos($username);
-
-            $_SESSION['user'] = $user;
-            $_SESSION['last_activity'] = time(); // iniciar el reloj de inactividad
-            $this->redirigirPorRol($user['rol']);
+            $ok = $this->model->actualizar($id, $datos);
+            flash($ok ? 'success' : 'error', $ok ? 'Usuario actualizado.' : 'No se pudo actualizar (datos duplicados).');
+            $this->historial->registrar('actualizar_usuario', 'Usuario #' . $id, current_user()['id'] ?? null);
         } else {
-            // 3. Login fallido: registrar intento
-            $usuarioModel->registrarIntentoFallido($username);
-
-            // Revisar si este intento fue el que activó el bloqueo (el 3ro)
-            $segundosRestantes = $usuarioModel->verificarBloqueo($username);
-            if ($segundosRestantes > 0) {
-                header("Location: /Proyecto-TeMa/view/login.php?error=locked&segundos=$segundosRestantes");
-                exit();
+            if ($datos['password'] === '') {
+                flash('error', 'La contraseña es obligatoria para usuarios nuevos.');
+                redirect('view/configuracion.php');
             }
-
-            header("Location: /Proyecto-TeMa/view/login.php?error=invalid_credentials");
-            exit();
+            $res = $this->model->registrar(
+                $datos['nombre'], $datos['apellido'], $datos['rol'],
+                $datos['password'], $datos['email'], $datos['documento']
+            );
+            flash($res['ok'] ? 'success' : 'error', $res['ok']
+                ? 'Usuario creado: ' . $res['username']
+                : ($res['error'] ?? 'No se pudo crear el usuario.'));
         }
+        redirect('view/configuracion.php');
     }
 
-    private function redirigirPorRol($rol) {
-        switch (strtolower($rol)) {
-            case 'vendedor':
-            case 'cajero':
-                header("Location: /Proyecto-TeMa/view/pos.php");
-                break;
-            case 'administrador':
-                header("Location: /Proyecto-TeMa/view/dashboard.php");
-                break;
-            default:
-                header("Location: /Proyecto-TeMa/view/dashboard.php");
+    /** Admin: activar/desactivar usuario sin borrar (POST + CSRF). */
+    public function estado(): void
+    {
+        $id = (int) post('id');
+        $estado = post('estado') === 'inactivo' ? 'inactivo' : 'activo';
+        $yo = (int) (current_user()['id'] ?? 0);
+        $retorno = post('return_estado') === 'inactivo' ? '?estado=inactivo' : '';
+
+        if ($id <= 0) {
+            flash('error', 'Usuario inválido.');
+            redirect('view/configuracion.php' . $retorno);
         }
-        exit();
-    }
-
-    public function logout() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        $u = $this->model->obtenerPorId($id);
+        if (!$u) {
+            flash('error', 'Usuario no encontrado.');
+            redirect('view/configuracion.php' . $retorno);
         }
-        session_destroy();
-        header("Location: /Proyecto-TeMa/view/login.php");
-        exit();
-    }
-
-    public function solicitarRecuperacion($email) {
-        require_once __DIR__ . '/../helpers/mailer_recuperacion.php'; // <-- cambio aquí
-
-        $usuarioModel = new Usuario();
-        $datos = $usuarioModel->generarTokenRecuperacion($email);
-
-        if ($datos) {
-            $link = "http://localhost/Proyecto-TeMa/view/recuperar_contra.php?token=" . $datos['token'];
-            enviarCorreoRecuperacion($datos['email'], $datos['nombre'], $link);
+        if ($estado === 'inactivo') {
+            if ($id === $yo) {
+                flash('error', 'No puedes desactivar tu propia cuenta.');
+                redirect('view/configuracion.php' . $retorno);
+            }
+            if ($u['rol'] === 'Administrador' && $this->model->contarAdminsActivos() <= 1) {
+                flash('error', 'No puedes desactivar al último administrador activo.');
+                redirect('view/configuracion.php' . $retorno);
+            }
         }
 
-        header("Location: /Proyecto-TeMa/view/recuperar_contra.php?status=enviado");
-        exit();
-    }
-
-    public function restablecerPassword($token, $password, $passwordConfirmar) {
-        if ($password !== $passwordConfirmar) {
-            header("Location: /Proyecto-TeMa/view/recuperar_contra.php?token=" . urlencode($token) . "&error=no_coincide");
-            exit();
-        }
-
-        if (strlen($password) < 6) {
-            header("Location: /Proyecto-TeMa/view/recuperar_contra.php?token=" . urlencode($token) . "&error=muy_corta");
-            exit();
-        }
-
-        $usuarioModel = new Usuario();
-        $id = $usuarioModel->validarTokenRecuperacion($token);
-
-        if (!$id) {
-            header("Location: /Proyecto-TeMa/view/recuperar_contra.php?error=token_invalido");
-            exit();
-        }
-
-        $usuarioModel->restablecerPassword($id, $password);
-        header("Location: /Proyecto-TeMa/view/login.php?status=password_actualizada");
-        exit();
-    }
-
-    public function eliminar($id) {
-        $usuarioModel = new Usuario();
-        if ($usuarioModel->eliminar($id)) {
-            header("Location: /Proyecto-TeMa/view/configuracion.php?status=deleted");
+        if ($this->model->cambiarEstado($id, $estado)) {
+            $this->historial->registrar('estado_usuario', 'Usuario #' . $id . ' -> ' . $estado, $yo);
+            flash('success', $estado === 'activo' ? 'Usuario reactivado.' : 'Usuario desactivado.');
         } else {
-            header("Location: /Proyecto-TeMa/view/configuracion.php?error=delete_failed");
+            flash('error', 'No se pudo cambiar el estado.');
         }
-        exit();
+        redirect('view/configuracion.php' . $retorno);
     }
 
-    public function editar($id, $username, $password) {
-        $usuarioModel = new Usuario();
-        $usuarioModel->actualizar($id, $username, $password);
-        header("Location: /Proyecto-TeMa/view/configuracion.php?status=updated");
-        exit();
+    /** Admin: eliminar usuario (POST + CSRF). */
+    public function eliminar(): void
+    {
+        $id = (int) post('id');
+        $yo = (int) (current_user()['id'] ?? 0);
+
+        if ($id <= 0) {
+            flash('error', 'Usuario inválido.');
+            redirect('view/configuracion.php');
+        }
+        if ($id === $yo) {
+            flash('error', 'No puedes eliminar tu propia cuenta.');
+            redirect('view/configuracion.php');
+        }
+        $u = $this->model->obtenerPorId($id);
+        if ($u && $u['rol'] === 'Administrador' && $this->model->contarAdminsActivos() <= 1) {
+            flash('error', 'No puedes eliminar al último administrador activo.');
+            redirect('view/configuracion.php');
+        }
+
+        if ($this->model->eliminar($id)) {
+            $this->historial->registrar('eliminar_usuario', 'Usuario #' . $id, $yo);
+            flash('success', 'Usuario eliminado.');
+        } else {
+            flash('error', 'No se pudo eliminar (puede tener registros asociados). Desactívalo en su lugar.');
+        }
+        redirect('view/configuracion.php');
     }
 
-    public function cambiarEstado($id) {
-    $usuarioModel = new Usuario();
-    $usuarioModel->cambiarEstado((int)$id);
-    header("Location: /Proyecto-TeMa/view/configuracion.php?status=estado_actualizado");
-    exit();
+    /** RF 1.5: solicitar enlace de restablecimiento. */
+    public function solicitarReset(): void
+    {
+        $email = trim((string) post('email'));
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $user = $this->model->obtenerPorEmail($email);
+            if ($user) {
+                $token = $this->model->crearTokenReset((int) $user['id']);
+                $link = base_url('view/restablecer.php?token=' . urlencode($token));
+                // Sin servidor de correo en este entorno: en modo local se muestra el enlace.
+                if (APP_DEBUG) {
+                    flash('info', 'Enlace de recuperación (modo local): ' . $link);
+                }
+            }
+        }
+        // Mensaje genérico para no revelar si el correo existe.
+        flash('success', 'Si el correo está registrado, recibirás un enlace de recuperación válido por 1 hora.');
+        redirect('view/recuperar.php');
+    }
+
+    /** RF 1.5: aplicar nueva contraseña con token válido. */
+    public function restablecer(): void
+    {
+        $token = (string) post('token');
+        $p1 = (string) post('password');
+        $p2 = (string) post('password_confirm');
+
+        if ($token === '' || mb_strlen($p1) < PASSWORD_MIN_LENGTH || $p1 !== $p2) {
+            flash('error', 'Datos inválidos: verifica el enlace y que ambas contraseñas coincidan (mínimo ' . PASSWORD_MIN_LENGTH . ' caracteres).');
+            redirect('view/restablecer.php?token=' . urlencode($token));
+        }
+        if ($this->model->restablecerConToken($token, $p1)) {
+            flash('success', 'Contraseña actualizada. Ya puedes iniciar sesión.');
+            redirect('view/login.php?status=password_reset');
+        }
+        flash('error', 'El enlace es inválido o expiró. Solicita uno nuevo.');
+        redirect('view/recuperar.php');
+    }
 }
-}
-?>

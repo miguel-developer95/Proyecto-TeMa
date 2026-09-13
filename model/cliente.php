@@ -1,108 +1,55 @@
 <?php
+declare(strict_types=1);
 
-require_once __DIR__ . '/../config/connection.php';
+require_once __DIR__ . '/../config/Connection.php';
 
+/** Modelo de clientes. Tabla: clientes. */
 class Cliente
 {
-    private PDO $conn;
-    private string $tabla = 'cliente';
-
-    public int $id_cliente;
-    public string $nombre_cliente;
-    public string $correo_electronico;
+    private PDO $db;
 
     public function __construct()
     {
-    $this->conn = ( new Connection() )->conn;
+        $this->db = (new Connection())->conn;
     }
 
-    // RF: registrar un nuevo cliente
-    public function crear(): bool
+    public function crear(string $nombre, ?string $correo = null, ?string $telefono = null, ?string $documento = null): int
     {
-        $sql = "INSERT INTO {$this->tabla} (nombre_cliente, correo_electronico)
-                VALUES (:nombre_cliente, :correo_electronico)";
-
-        $stmt = $this->conn->prepare($sql);
-
-        $stmt->bindParam(':nombre_cliente', $this->nombre_cliente);
-        $stmt->bindParam(':correo_electronico', $this->correo_electronico);
-
-        if ($stmt->execute()) {
-            $this->id_cliente = (int) $this->conn->lastInsertId();
-            return true;
+        try {
+            $stmt = $this->db->prepare(
+                "INSERT INTO clientes (nombre, correo_electronico, telefono, documento)
+                 VALUES (:n, :c, :t, :d)"
+            );
+            $stmt->execute([
+                ':n' => trim($nombre),
+                ':c' => ($correo !== null && trim($correo) !== '') ? trim($correo) : null,
+                ':t' => ($telefono !== null && trim($telefono) !== '') ? trim($telefono) : null,
+                ':d' => ($documento !== null && trim($documento) !== '') ? trim($documento) : null,
+            ]);
+            return (int) $this->db->lastInsertId();
+        } catch (PDOException $e) {
+            return 0;
         }
-
-        return false;
     }
 
-    // Listar todos los clientes
-    public function obtenerTodos(): PDOStatement
+    public function obtenerTodos(): array
     {
-        $sql = "SELECT id_cliente, nombre_cliente, correo_electronico
-                FROM {$this->tabla}
-                ORDER BY nombre_cliente ASC";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-
-        return $stmt;
+        return $this->db->query(
+            "SELECT * FROM clientes ORDER BY nombre ASC"
+        )->fetchAll();
     }
 
-    // Buscar un cliente por su id
-    public function obtenerPorId(int $id_cliente): array|false
+    public function obtenerPorId(int $id)
     {
-        $sql = "SELECT id_cliente, nombre_cliente, correo_electronico
-                FROM {$this->tabla}
-                WHERE id_cliente = :id_cliente
-                LIMIT 1";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_cliente', $id_cliente, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->db->prepare("SELECT * FROM clientes WHERE id_cliente = :id LIMIT 1");
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch();
     }
 
-    // Buscar un cliente por correo (útil para validar duplicados)
-    public function obtenerPorCorreo(string $correo_electronico): array|false
+    public function obtenerPorCorreo(string $correo)
     {
-        $sql = "SELECT id_cliente, nombre_cliente, correo_electronico
-                FROM {$this->tabla}
-                WHERE correo_electronico = :correo_electronico
-                LIMIT 1";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':correo_electronico', $correo_electronico);
-        $stmt->execute();
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    // Actualizar datos de un cliente
-    public function actualizar(): bool
-    {
-        $sql = "UPDATE {$this->tabla}
-                SET nombre_cliente = :nombre_cliente,
-                    correo_electronico = :correo_electronico
-                WHERE id_cliente = :id_cliente";
-
-        $stmt = $this->conn->prepare($sql);
-
-        $stmt->bindParam(':nombre_cliente', $this->nombre_cliente);
-        $stmt->bindParam(':correo_electronico', $this->correo_electronico);
-        $stmt->bindParam(':id_cliente', $this->id_cliente, PDO::PARAM_INT);
-
-        return $stmt->execute();
-    }
-
-    // Eliminar un cliente
-    public function eliminar(int $id_cliente): bool
-    {
-        $sql = "DELETE FROM {$this->tabla} WHERE id_cliente = :id_cliente";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_cliente', $id_cliente, PDO::PARAM_INT);
-
-        return $stmt->execute();
+        $stmt = $this->db->prepare("SELECT * FROM clientes WHERE correo_electronico = :c LIMIT 1");
+        $stmt->execute([':c' => trim($correo)]);
+        return $stmt->fetch();
     }
 }

@@ -1,410 +1,146 @@
 <?php
-// Deshabilitar la memoria caché del navegador
-header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
-header("Pragma: no-cache"); // HTTP 1.0
-header("Expires: 0"); // Proxies
-
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-if (!isset($_SESSION['user'])) {
-    header("Location: /Proyecto-TeMa/view/login.php");
-    exit();
-}
+require_once __DIR__ . '/../config/config.php';
+require_role(['administrador']); // RF 2.3: solo el administrador gestiona usuarios
 
 require_once __DIR__ . '/../model/usuario.php';
-$usuarioModel = new Usuario();
+$model = new Usuario();
 
-$totalUsuarios = $usuarioModel->contarUsuarios();
-$usuarios = $usuarioModel->obtenerTodos();
+$totalUsuarios = $model->contarUsuarios();
+$totalActivos = $model->contarPorEstado('activo');
+$totalInactivos = $model->contarPorEstado('inactivo');
 
-$editMode = isset($_GET['edit_id']);
-$editId = $_GET['edit_id'] ?? '';
-$editUsername = $_GET['edit_username'] ?? '';
-$editEmail = $_GET['edit_email'] ?? '';
-$editDocumento = $_GET['edit_documento'] ?? '';
+$verInactivos = get('estado') === 'inactivo';
+$usuarios = $model->listar($verInactivos ? 'inactivo' : 'activo');
+$filtroQS = $verInactivos ? '?estado=inactivo' : '';
+
+$editando = null;
+if (get('edit') !== '') {
+    $editando = $model->obtenerPorId((int) get('edit')) ?: null;
+}
+
+$titulo = 'Configuración';
+require __DIR__ . '/partials/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuración - Tentaciones Marlly</title>
-    <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        /* Estilos Base e idénticos al Dashboard */
-        * html,
-        body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100%;
-            width: 100%;
-        }
+<h2>Gestión de Usuarios</h2>
+<p class="muted">Total: <strong><?= e($totalUsuarios) ?></strong> · Activos: <strong><?= e($totalActivos) ?></strong> · Inactivos: <strong><?= e($totalInactivos) ?></strong></p>
 
-        body {
-            display: flex;
-            background-color: #fce4ec;
-            overflow-x: hidden;
-            font-family: 'Poppins', sans-serif;
-        }
+<div class="toolbar">
+    <div></div>
+    <div>
+        <a class="btn-primary <?= $verInactivos ? '' : 'btn-cancel' ?>" href="<?= e(base_url('view/configuracion.php')) ?>">Activos</a>
+        <a class="btn-primary <?= $verInactivos ? 'btn-cancel' : '' ?>" href="<?= e(base_url('view/configuracion.php?estado=inactivo')) ?>">Inactivos</a>
+    </div>
+</div>
 
-        .sidebar {
-            width: 280px;
-            min-width: 280px;
-            background: linear-gradient(0deg, #3d405b 10%, #ffffff 50%);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px 0;
-            height: 100vh;
-            box-sizing: border-box;
-            box-shadow: 10px 0 30px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .sidebar-header {
-            text-align: center;
-            padding: 0 15px 20px;
-        }
-
-        .sidebar-header img {
-            width: 190px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-        }
-
-        .sidebar-header h3 {
-            font-size: 16px;
-            color: #e63c82;
-        }
-
-        .menu-list {
-            list-style: none;
-            margin-top: 20px;
-        }
-
-        .menu-list li a {
-            display: flex;
-            align-items: center;
-            font-size: 16px;
-            font-weight: 600;
-            color: #adb5bd;
-            text-decoration: none;
-            padding: 12px 20px;
-            margin: 6px 15px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
-                background-color 0.3s ease,
-                box-shadow 0.3s ease;
-            will-change: transform;
-        }
-
-        .menu-list li a i {
-            margin-right: 12px;
-            font-size: 16px;
-        }
-
-        .menu-list li a:hover,
-        .menu-list li.active a {
-            background-color: #e63c82;
-            color: #ffffff;
-            border-color: #c22b68;
-            transform: translateY(-6px);
-            box-shadow: 0 6px 16px rgba(230, 60, 130, 0.3);
-        }
-
-        .logout-btn {
-            padding: 12px 20px;
-            color: #ff6b6b;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            font-size: 16px;
-            font-weight: 600;
-            margin: 10px 15px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-        }
-
-        .logout-btn i {
-            margin-right: 12px;
-            font-size: 18px;
-        }
-
-        .logout-btn:hover {
-            background-color: #c41313;
-            color: #ffffff;
-            transform: translateY(-6px);
-            border-color: #ff6b6b;
-        }
-
-        /* Contenido Principal */
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        .crud-card {
-            background: #fff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 25px;
-        }
-
-        /* Formulario Organizado en Cuadrícula */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px 20px;
-            margin-top: 15px;
-        }
-
-        .form-group {
-            width: 100%;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #333;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-
-        .btn-container {
-            grid-column: span 2;
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .btn-primary {
-            background-color: #e63c82;
-            color: white;
-            padding: 0 25px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: 0.3s;
-            height: 42px;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        .btn-primary:hover {
-            background-color: #c22b68;
-            transform: translateY(-2px);
-        }
-
-        .btn-cancel {
-            background-color: #6c757d;
-        }
-
-        .btn-cancel:hover {
-            background-color: #5a6268;
-        }
-
-        /* Tabla de Usuarios */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th,
-        td {
-            padding: 14px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-        }
-
-        th {
-            background-color: #f8f9fa;
-            color: #555;
-        }
-
-        .action-btn {
-            padding: 6px 12px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-edit {
-            background: #e3f2fd;
-            color: #1976d2;
-            margin-right: 5px;
-        }
-
-        .btn-delete {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .btn-container {
-                grid-column: span 1;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-    <?php require_once __DIR__ . '/../helpers/sidebar.php'; ?>
-
-    <!-- Contenido Principal -->
-    <main class="main-content">
-        <h2>Gestión de Usuarios</h2>
-        <p style="color: #666; margin-bottom: 20px;">Total de usuarios registrados en el sistema: <strong><?php echo $totalUsuarios; ?></strong></p>
-
-        <!-- Formulario (Registrar o Editar) -->
-        <div class="crud-card">
-            <h3><?php echo $editMode ? 'Editar Usuario #' . htmlspecialchars($editId) : 'Crear Nuevo Usuario'; ?></h3>
-            <form action="/Proyecto-TeMa/index.php" method="POST">
-                <input type="hidden" name="action" value="<?php echo $editMode ? 'update_user' : 'register'; ?>">
-                <?php if ($editMode): ?>
-                    <input type="hidden" name="id" value="<?php echo htmlspecialchars($editId); ?>">
-                <?php endif; ?>
-
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Nombre de Usuario</label>
-                        <input type="text" name="username" value="<?php echo htmlspecialchars($editUsername); ?>" required placeholder="Nombre de usuario">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Correo Electrónico</label>
-                        <input type="email" name="email" value="<?php echo htmlspecialchars($editEmail); ?>" required placeholder="correo@ejemplo.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Número de Documento</label>
-                        <input
-                            type="text"
-                            name="documento"
-                            value="<?php echo htmlspecialchars($editDocumento); ?>"
-                            required
-                            placeholder="Número de documento"
-                            inputmode="numeric"
-                            pattern="[0-9]+"
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                            title="Ingresa únicamente números">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Contraseña <?php echo $editMode ? '(Dejar vacío para conservar)' : ''; ?></label>
-                        <input type="password" name="password" <?php echo $editMode ? '' : 'required'; ?> placeholder="<?php echo $editMode ? 'Opcional' : 'Contraseña'; ?>">
-                    </div>
-
-                    <div class="btn-container">
-                        <button type="submit" class="btn-primary">
-                            <i class="fa-solid <?php echo $editMode ? 'fa-floppy-disk' : 'fa-user-plus'; ?>"></i>
-                            <?php echo $editMode ? 'Guardar Cambios' : 'Registrar'; ?>
-                        </button>
-
-                        <?php if ($editMode): ?>
-                            <a href="/Proyecto-TeMa/view/configuracion.php" class="btn-primary btn-cancel">Cancelar</a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- Tabla de Usuarios -->
-        <div class="crud-card">
-            <h3>Lista de Usuarios Registrados</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre de Usuario</th>
-                        <th>Correo</th>
-                        <th>No. Documento</th>
-                        <th>Rol</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($usuarios as $u): ?>
-                        <tr>
-                            <td>#<?php echo $u['id']; ?></td>
-                            <td><strong><?php echo htmlspecialchars($u['username']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($u['email'] ?? $u['correo_electronico'] ?? 'Sin correo'); ?></td>
-                            <td><?php echo htmlspecialchars($u['documento'] ?? $u['No.Documento'] ?? 'N/A'); ?></td>
-                            <td><?php echo htmlspecialchars($u['rol'] ?? 'N/A'); ?></td>
-                            <td>
-                                <?php if (($u['estado'] ?? '') === 'activo'): ?>
-                                    <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
-                                    onclick="return confirm('¿Desactivar a este usuario? No podrá iniciar sesión mientras esté inactivo.');"
-                                    class="action-btn btn-deactivate">
-                                        <i class="fa-solid fa-user-slash"></i> Desactivar
-                                    </a>
-                                <?php else: ?>
-                                    <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
-                                    onclick="return confirm('¿Activar a este usuario? Podrá volver a iniciar sesión.');"
-                                    class="action-btn btn-activate">
-                                        <i class="fa-solid fa-user-check"></i> Activar
-                                    </a>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? $u['No.Documento'] ?? ''); ?>&edit_rol=<?php echo urlencode($u['rol'] ?? ''); ?>&edit_estado=<?php echo urlencode($u['estado'] ?? ''); ?>" class="action-btn btn-edit">
-                                    <i class="fa-solid fa-pen"></i> Editar
-                                </a>
-                                <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este usuario?');" class="action-btn btn-delete">
-                                    <i class="fa-solid fa-trash"></i> Eliminar
-                                </a>
-                            </td>
-                        </tr>
+<div class="crud-card">
+    <h3><?= $editando ? 'Editar Usuario #' . e($editando['id']) : 'Crear Nuevo Usuario' ?></h3>
+    <form action="<?= e(base_url('index.php')) ?>" method="POST">
+        <input type="hidden" name="action" value="save_user">
+        <?= csrf_field() ?>
+        <?php if ($editando): ?>
+            <input type="hidden" name="id" value="<?= e($editando['id']) ?>">
+        <?php endif; ?>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" name="nombre" value="<?= e($editando['nombre'] ?? '') ?>" required maxlength="80">
+            </div>
+            <div class="form-group">
+                <label>Apellido</label>
+                <input type="text" name="apellido" value="<?= e($editando['apellido'] ?? '') ?>" required maxlength="80">
+            </div>
+            <div class="form-group">
+                <label>Nombre de Usuario</label>
+                <input type="text" name="username" value="<?= e($editando['username'] ?? '') ?>" required maxlength="60">
+            </div>
+            <div class="form-group">
+                <label>Rol</label>
+                <select name="rol" required>
+                    <?php foreach (['Administrador', 'Vendedor'] as $r): ?>
+                        <option value="<?= e($r) ?>" <?= ($editando['rol'] ?? '') === $r ? 'selected' : '' ?>><?= e($r) ?></option>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Correo Electrónico</label>
+                <input type="email" name="email" value="<?= e($editando['email'] ?? '') ?>" placeholder="correo@ejemplo.com" maxlength="120">
+            </div>
+            <div class="form-group">
+                <label>Número de Documento</label>
+                <input type="text" name="documento" value="<?= e($editando['documento'] ?? '') ?>" placeholder="Número de documento" maxlength="30">
+            </div>
+            <div class="form-group">
+                <label>Estado</label>
+                <select name="estado">
+                    <option value="activo" <?= ($editando['estado'] ?? 'activo') === 'activo' ? 'selected' : '' ?>>Activo</option>
+                    <option value="inactivo" <?= ($editando['estado'] ?? '') === 'inactivo' ? 'selected' : '' ?>>Inactivo</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Contraseña <?= $editando ? '(vacía = conservar)' : '' ?></label>
+                <input type="password" name="password" <?= $editando ? '' : 'required' ?> minlength="<?= PASSWORD_MIN_LENGTH ?>" placeholder="<?= $editando ? 'Opcional' : 'Contraseña' ?>" autocomplete="new-password">
+            </div>
+            <div class="btn-container">
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid <?= $editando ? 'fa-floppy-disk' : 'fa-user-plus' ?>"></i>
+                    <?= $editando ? 'Guardar Cambios' : 'Registrar' ?>
+                </button>
+                <?php if ($editando): ?>
+                    <a href="<?= e(base_url('view/configuracion.php' . $filtroQS)) ?>" class="btn-primary btn-cancel">Cancelar</a>
+                <?php endif; ?>
+            </div>
         </div>
-    </main>
+    </form>
+</div>
 
-    <!-- Script para cerrar sesión al retroceder -->
-    <script>
-        window.addEventListener("pageshow", function(event) {
-            var historyTraversal = event.persisted ||
-                (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
+<div class="crud-card">
+    <h3>Lista de Usuarios <?= $verInactivos ? 'Inactivos' : 'Activos' ?></h3>
+    <div class="table-responsive">
+    <table>
+        <thead>
+            <tr><th>ID</th><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Correo</th><th>Documento</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            <?php foreach ($usuarios as $u): ?>
+                <tr>
+                    <td>#<?= e($u['id']) ?></td>
+                    <td><strong><?= e($u['username']) ?></strong></td>
+                    <td><?= e(trim($u['nombre'] . ' ' . $u['apellido'])) ?></td>
+                    <td><?= e($u['rol']) ?></td>
+                    <td><?= e($u['email'] ?? '—') ?></td>
+                    <td><?= e($u['documento'] ?? '—') ?></td>
+                    <td><span class="badge badge-<?= e($u['estado']) ?>"><?= e($u['estado']) ?></span></td>
+                    <td class="actions">
+                        <a href="<?= e(base_url('view/configuracion.php' . $filtroQS . ($filtroQS ? '&' : '?') . 'edit=' . $u['id'])) ?>" class="action-btn btn-edit">
+                            <i class="fa-solid fa-pen"></i> Editar
+                        </a>
+                        <form action="<?= e(base_url('index.php')) ?>" method="POST" class="inline-form"
+                              onsubmit="return confirm('¿Seguro que deseas <?= $u['estado'] === 'activo' ? 'desactivar' : 'reactivar' ?> este usuario?');">
+                            <input type="hidden" name="action" value="user_estado">
+                            <input type="hidden" name="id" value="<?= e($u['id']) ?>">
+                            <input type="hidden" name="estado" value="<?= $u['estado'] === 'activo' ? 'inactivo' : 'activo' ?>">
+                            <input type="hidden" name="return_estado" value="<?= $verInactivos ? 'inactivo' : 'activo' ?>">
+                            <?= csrf_field() ?>
+                            <?php if ($u['estado'] === 'activo'): ?>
+                                <button type="submit" class="action-btn btn-delete">
+                                    <i class="fa-solid fa-ban"></i> Desactivar
+                                </button>
+                            <?php else: ?>
+                                <button type="submit" class="action-btn btn-edit">
+                                    <i class="fa-solid fa-rotate-left"></i> Reactivar
+                                </button>
+                            <?php endif; ?>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            <?php if (empty($usuarios)): ?>
+                <tr><td colspan="8" class="muted">Sin usuarios <?= $verInactivos ? 'inactivos' : 'activos' ?> para mostrar.</td></tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+    </div>
+</div>
 
-            if (historyTraversal) {
-                // Redirige reemplazando la entrada del historial para evitar bucles
-                window.location.replace("/Proyecto-TeMa/index.php?action=logout");
-            }
-        });
-    </script>
-    <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
-</body>
-
-</html>
+<?php require __DIR__ . '/partials/foot.php'; ?>

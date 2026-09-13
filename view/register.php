@@ -1,64 +1,43 @@
 <?php
-// Deshabilitar la memoria caché del navegador
-header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
-header("Pragma: no-cache"); // HTTP 1.0
-header("Expires: 0"); // Proxies
+require_once __DIR__ . '/../config/config.php';
 
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-// OPCIONAL: si el usuario YA tiene sesión activa, no tiene sentido
-// que vuelva a registrarse; lo mandamos directo al dashboard.
-if (isset($_SESSION['user'])) {
-    header("Location: /Proyecto-TeMa/view/dashboard.php");
-    exit();
+if (is_logged_in()) {
+    redirect_by_role();
 }
 ?>
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tentaciones Marlly - Registrarse</title>
-    <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/index.css">
+    <link rel="stylesheet" href="<?= e(base_url('public/styles/app.css')) ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
-
 <body>
-
     <div class="login-wrapper">
         <div class="login-card">
-
-            <img src="/Proyecto-TeMa/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
-
+            <img src="<?= e(base_url('public/logo.png')) ?>" alt="Logo Tentaciones Marlly" class="shop-logo">
             <p class="tagline">MINI TIENDA DE CONSUMO DIARIO</p>
-
             <h2 class="welcome">Crear Cuenta</h2>
             <p class="subtitle">Regístrate para comenzar</p>
 
-            <!-- Alertas dinámicas -->
-            <?php if (isset($_GET['error']) && $_GET['error'] === 'user_exists'): ?>
-                <p
-                    style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
-                    El nombre de usuario, correo o documento ya existe. Por favor verifica.
-                </p>
-            <?php endif; ?>
+            <?php foreach (flashes() as $f): ?>
+                <p class="flash flash-<?= e($f['type']) ?>"><?= e($f['msg']) ?></p>
+            <?php endforeach; ?>
 
-            <!-- Formulario configurado hacia el controlador -->
-            <form action="/Proyecto-TeMa/index.php" method="POST">
+            <form action="<?= e(base_url('index.php')) ?>" method="POST">
                 <input type="hidden" name="action" value="register">
-
+                <?= csrf_field() ?>
                 <div class="input-group">
                     <i class="fa-solid fa-user"></i>
-                    <input type="text" name="nombre" placeholder="Nombre" required>
+                    <input type="text" name="nombre" placeholder="Nombre" required maxlength="80">
                 </div>
-
                 <div class="input-group">
                     <i class="fa-solid fa-user"></i>
-                    <input type="text" name="apellido" placeholder="Apellido" required>
+                    <input type="text" name="apellido" placeholder="Apellido" required maxlength="80">
                 </div>
-
-                <div class="input-group1"> 
+                <div class="input-group">
                     <i class="fa-solid fa-id-badge"></i>
                     <select name="rol" required>
                         <option value="">Selecciona un rol</option>
@@ -66,38 +45,35 @@ if (isset($_SESSION['user'])) {
                         <option value="Vendedor">Vendedor</option>
                     </select>
                 </div>
-
                 <div class="input-group">
                     <i class="fa-solid fa-envelope"></i>
-                    <input type="email" id="email" name="email" placeholder="Correo electrónico" required>
+                    <input type="email" name="email" placeholder="Correo electrónico" required maxlength="120">
                 </div>
-
                 <div class="input-group">
                     <i class="fa-solid fa-id-card"></i>
-                    <input type="text" id="documento" name="documento" placeholder="Número de documento" required>
+                    <input type="text" name="documento" placeholder="Número de documento" required maxlength="30">
                 </div>
-
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
-                    <input type="password" id="password" name="password" placeholder="Contraseña" required>
+                    <input type="password" id="password" name="password" placeholder="Contraseña (mínimo 8 caracteres)" required minlength="8" autocomplete="new-password">
                     <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
                 </div>
-
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" name="password_confirm" placeholder="Confirmar contraseña" required minlength="8" autocomplete="new-password">
+                </div>
                 <button type="submit">Registrarme</button>
             </form>
 
-            <p class="register-link" style="margin-top: 20px; font-size: 14px; color: #888;">
-                ¿Ya tienes una cuenta? <a href="/Proyecto-TeMa/view/login.php"
-                    style="color: #e63c82; text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
+            <p class="register-link">¿Ya tienes una cuenta?
+                <a href="<?= e(base_url('view/login.php')) ?>">Iniciar Sesión</a>
             </p>
-
         </div>
     </div>
 
     <script>
         const toggleEye = document.getElementById('toggleEye');
         const password = document.getElementById('password');
-
         toggleEye.addEventListener('click', () => {
             const isPassword = password.type === 'password';
             password.type = isPassword ? 'text' : 'password';
@@ -105,7 +81,5 @@ if (isset($_SESSION['user'])) {
             toggleEye.classList.toggle('fa-eye-slash');
         });
     </script>
-
 </body>
-
 </html>
