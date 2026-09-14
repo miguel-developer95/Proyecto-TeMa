@@ -128,8 +128,15 @@ class Producto
             $params[':estado'] = $estado;
         }
         if (trim($q) !== '') {
-            $sql .= " AND (p.nombre LIKE :q OR p.codigo_barras LIKE :q OR p.categoria LIKE :q)";
-            $params[':q'] = '%' . trim($q) . '%';
+            // Cada aparición de :q necesita su propio nombre de marcador,
+            // porque PDO no permite repetir el mismo parámetro en modo nativo.
+            // Se usa LOWER() en ambos lados para que la búsqueda no distinga
+            // mayúsculas de minúsculas, sin depender de la collation de la BD.
+            $sql .= " AND (LOWER(p.nombre) LIKE LOWER(:q1) OR LOWER(p.codigo_barras) LIKE LOWER(:q2) OR LOWER(p.categoria) LIKE LOWER(:q3))";
+            $like = '%' . trim($q) . '%';
+            $params[':q1'] = $like;
+            $params[':q2'] = $like;
+            $params[':q3'] = $like;
         }
         $sql .= " ORDER BY p.nombre ASC";
         $stmt = $this->db->prepare($sql);

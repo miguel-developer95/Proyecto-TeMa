@@ -15,7 +15,7 @@ $lineas = [];
 $total = 0.0;
 foreach ($cart as $idProd => $cant) {
     $p = $prodModel->obtenerPorId((int) $idProd);
-    if (!$p || $p['estado'] !== 'activo') {
+    if (!$p || strtolower(trim((string) ($p['estado'] ?? ''))) !== 'activo') {
         continue;
     }
     $sub = $cant * (float) $p['precio_venta'];

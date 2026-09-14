@@ -22,6 +22,12 @@ class VentaController
         $this->historial = new Historial();
     }
 
+    /** Compara el estado de un producto sin importar mayúsculas/minúsculas ni espacios. */
+    private function estaActivo(array $p): bool
+    {
+        return strtolower(trim((string) ($p['estado'] ?? ''))) === 'activo';
+    }
+
     /** @return array<int, int> id_producto => cantidad */
     private function carrito(): array
     {
@@ -51,7 +57,7 @@ class VentaController
             }
         }
 
-        if (!$prod || $prod['estado'] !== 'activo') {
+        if (!$prod || !$this->estaActivo($prod)) {
             flash('error', 'Producto no encontrado o inactivo.');
             redirect('view/pos.php');
         }
@@ -227,7 +233,7 @@ class VentaController
 
         $idMetodo = (int) post('id_metodo_pago');
         $metodo = (new MetodoPago())->obtenerPorId($idMetodo);
-        if (!$metodo || $metodo['estado'] !== 'activo') {
+        if (!$metodo || strtolower(trim((string) ($metodo['estado'] ?? ''))) !== 'activo') {
             flash('error', 'Selecciona un método de pago válido.');
             redirect('view/pos.php');
         }
@@ -241,7 +247,7 @@ class VentaController
         $items = [];
         foreach ($cart as $idProd => $cant) {
             $p = $this->productos->obtenerPorId($idProd);
-            if (!$p || $p['estado'] !== 'activo') {
+            if (!$p || !$this->estaActivo($p)) {
                 flash('error', 'Un producto del carrito ya no está disponible.');
                 redirect('view/pos.php');
             }
