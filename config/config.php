@@ -41,7 +41,7 @@ define('DB_HOST', env('DB_HOST', 'localhost'));
 define('DB_NAME', env('DB_NAME', 'tentaciones_marlly'));
 define('DB_USER', env('DB_USER', 'root'));
 define('DB_PASS', env('DB_PASS', ''));
-define('SESSION_TIMEOUT', (int) env('SESSION_TIMEOUT', '1800'));
+define('SESSION_TIMEOUT', (int) env('SESSION_TIMEOUT', '60'));
 define('LOCKOUT_ATTEMPTS', (int) env('LOCKOUT_ATTEMPTS', '3'));
 define('LOCKOUT_MINUTES', (int) env('LOCKOUT_MINUTES', '1'));
 define('PASSWORD_MIN_LENGTH', 8);
@@ -70,4 +70,6 @@ require_once $rootDir . '/helpers/functions.php';
 require_once $rootDir . '/helpers/auth.php';
 
 start_secure_session();
-enforce_session_timeout();
+if (!defined('SKIP_SESSION_TIMEOUT_CHECK')) {
+    enforce_session_timeout();
+}
