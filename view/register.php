@@ -42,7 +42,6 @@ if (is_logged_in()) {
                     <select name="rol" required>
                         <option value="">Selecciona un rol</option>
                         <option value="Administrador">Administrador</option>
-                        <option value="Vendedor">Vendedor</option>
                     </select>
                 </div>
                 <div class="input-group">
