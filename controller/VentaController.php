@@ -1,12 +1,13 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../helpers/funciones.php';
 require_once __DIR__ . '/../model/venta.php';
 require_once __DIR__ . '/../model/producto.php';
 require_once __DIR__ . '/../model/cliente.php';
-require_once __DIR__ . '/../model/metodo_pago.php';
-require_once __DIR__ . '/../model/venta_pausada.php';
-require_once __DIR__ . '/../model/historial.php';
+require_once __DIR__ . '/../model/metodos_pago.php';
+require_once __DIR__ . '/../model/ventas_pausadas.php';
+require_once __DIR__ . '/../model/historial_modificacion.php';
 
 /** Punto de venta y anulaciones. Roles vendedor/cajero/administrador. */
 class VentaController

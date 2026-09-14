@@ -6,7 +6,7 @@ class HistorialModificacion
 {
     /** @var PDO */
     private PDO $conn;
-    private string $tabla = 'historial_modificacion';
+    private string $tabla = 'historial';
 
     public function __construct()
     {
@@ -15,22 +15,26 @@ class HistorialModificacion
 
     /**
      * Registra un cambio en el historial (RI 4.4 — trazabilidad de modificaciones).
-     *
-     * NOTA: esta tabla no tiene columna id_compra, así que la referencia a
-     * qué compra se modificó debe ir incluida dentro de $detalle_cambio
-     * (ver registrarCambioCompra() más abajo, que arma ese texto por ti).
      */
-    public function registrarCambio(string $tipo_accion, string $detalle_cambio, int $id_usuario): bool
+    public function registrarCambio(string $tipo_accion, string $detalle_cambio, ?int $id_usuario = null): bool
     {
         $sql = "INSERT INTO {$this->tabla} (fecha_accion, tipo_accion, detalle_cambio, id_usuario)
                 VALUES (NOW(), :tipo_accion, :detalle_cambio, :id_usuario)";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':tipo_accion', $tipo_accion);
-        $stmt->bindParam(':detalle_cambio', $detalle_cambio);
-        $stmt->bindParam(':id_usuario', $id_usuario, PDO::PARAM_INT);
+        $stmt->bindValue(':tipo_accion', $tipo_accion);
+        $stmt->bindValue(':detalle_cambio', $detalle_cambio);
+        $stmt->bindValue(':id_usuario', $id_usuario ?: null, $id_usuario ? PDO::PARAM_INT : PDO::PARAM_NULL);
 
         return $stmt->execute();
+    }
+
+    /**
+     * Alias de registrarCambio usado por controladores de venta/inventario.
+     */
+    public function registrar(string $tipo_accion, string $detalle_cambio, ?int $id_usuario = null): bool
+    {
+        return $this->registrarCambio($tipo_accion, $detalle_cambio, $id_usuario);
     }
 
     /**
@@ -120,3 +124,6 @@ class HistorialModificacion
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
+
+// Alias de clase para compatibilidad
+class Historial extends HistorialModificacion {}

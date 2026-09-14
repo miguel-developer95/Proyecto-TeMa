@@ -1,11 +1,7 @@
 <?php
-declare(strict_types=1);
+// model/producto.php
+require_once __DIR__ . '/../config/connection.php';
 
-require_once __DIR__ . '/../config/Connection.php';
-
-/**
- * Modelo de inventario. Tabla: productos. (RF 3.1 – 3.5)
- */
 class Producto
 {
     private PDO $db;
@@ -15,173 +11,141 @@ class Producto
         $this->db = (new Connection())->conn;
     }
 
-    /** RF 3.1: registra un producto. Retorna el id o 0 si falla. */
-    public function registrar(array $d): int
+    // Usado por pos.php: obtiene un producto por su id
+    public function obtenerPorId(int $id_producto): array|false
     {
-        try {
-            $codigo = trim((string) ($d['codigo_barras'] ?? ''));
-            $stmt = $this->db->prepare(
-                "INSERT INTO productos (codigo_barras, nombre, descripcion, categoria,
-                    precio_compra, precio_venta, cantidad_stock, stock_minimo, id_proveedor, estado)
-                 VALUES (:cb, :nombre, :descripcion, :categoria, :pc, :pv, :stock, :min, :prov, 'activo')"
-            );
-            $stmt->execute([
-                ':cb' => $codigo === '' ? null : $codigo,
-                ':nombre' => trim((string) ($d['nombre'] ?? '')),
-                ':descripcion' => trim((string) ($d['descripcion'] ?? '')) ?: null,
-                ':categoria' => trim((string) ($d['categoria'] ?? '')) ?: null,
-                ':pc' => (float) ($d['precio_compra'] ?? 0),
-                ':pv' => (float) ($d['precio_venta'] ?? 0),
-                ':stock' => (int) ($d['cantidad_stock'] ?? 0),
-                ':min' => (int) ($d['stock_minimo'] ?? 0),
-                ':prov' => !empty($d['id_proveedor']) ? (int) $d['id_proveedor'] : null,
-            ]);
-            return (int) $this->db->lastInsertId();
-        } catch (PDOException $e) {
-            return 0;
-        }
+        $sql = "SELECT * FROM productos WHERE id_producto = :id_producto LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':id_producto', $id_producto, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function existeCodigoBarras(string $codigo, ?int $excluirId = null): bool
+    // Usado por pos.php: busca productos activos por nombre o código de barras
+    public function listar(string $estado = 'activo', string $busqueda = ''): array
     {
-        $sql = "SELECT COUNT(*) FROM productos WHERE codigo_barras = :cb";
-        $params = [':cb' => $codigo];
-        if ($excluirId !== null) {
-            $sql .= " AND id_producto != :excluir";
-            $params[':excluir'] = $excluirId;
+        $sql = "SELECT * FROM productos WHERE estado = :estado";
+        $params = [':estado' => $estado];
+
+        if ($busqueda !== '') {
+            $sql .= " AND (nombre LIKE :busqueda OR codigo_barras LIKE :busqueda)";
+            $params[':busqueda'] = '%' . $busqueda . '%';
         }
+
+        $sql .= " ORDER BY nombre ASC";
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return (int) $stmt->fetchColumn() > 0;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** RF 3.2: actualización completa con auditoría. */
-    public function actualizar(int $id, array $d, int $idUsuario): bool
+    // Usado por producto.php: listado completo con alerta de stock bajo
+    public function listarTodos(): array
     {
+        $sql = "SELECT id_producto, codigo_barras, nombre, descripcion, categoria,
+                       precio_compra, precio_venta, cantidad_stock, stock_minimo, estado,
+                       (cantidad_stock <= stock_minimo) AS alerta_stock
+                FROM productos
+                ORDER BY nombre ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // RF 3.1 & RI 3.1: Registrar nuevo producto
+    public function registrar(array $datos): bool
+    {
+        $sql = "INSERT INTO productos
+                (codigo_barras, nombre, descripcion, categoria, precio_compra, precio_venta, cantidad_stock, stock_minimo, id_proveedor, estado)
+                VALUES (:codigo_barras, :nombre, :descripcion, :categoria, :precio_compra, :precio_venta, :cantidad_stock, :stock_minimo, :id_proveedor, 'activo')";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($datos);
+    }
+
+    // RF 3.2 & RI 3.2: Modificar producto + Trazabilidad
+    public function modificar(int $id_producto, float $precio_compra, float $precio_venta, string $estado, ?string $descripcion, int $id_usuario): bool
+    {
+        $this->db->beginTransaction();
         try {
-            $codigo = trim((string) ($d['codigo_barras'] ?? ''));
-            $stmt = $this->db->prepare(
-                "UPDATE productos SET codigo_barras = :cb, nombre = :nombre, descripcion = :descripcion,
-                    categoria = :categoria, precio_compra = :pc, precio_venta = :pv,
-                    cantidad_stock = :stock, stock_minimo = :min, id_proveedor = :prov,
-                    fecha_modificacion = NOW(), id_usuario_modificacion = :u
-                 WHERE id_producto = :id"
-            );
-            return $stmt->execute([
-                ':cb' => $codigo === '' ? null : $codigo,
-                ':nombre' => trim((string) ($d['nombre'] ?? '')),
-                ':descripcion' => trim((string) ($d['descripcion'] ?? '')) ?: null,
-                ':categoria' => trim((string) ($d['categoria'] ?? '')) ?: null,
-                ':pc' => (float) ($d['precio_compra'] ?? 0),
-                ':pv' => (float) ($d['precio_venta'] ?? 0),
-                ':stock' => (int) ($d['cantidad_stock'] ?? 0),
-                ':min' => (int) ($d['stock_minimo'] ?? 0),
-                ':prov' => !empty($d['id_proveedor']) ? (int) $d['id_proveedor'] : null,
-                ':u' => $idUsuario,
-                ':id' => $id,
+            $sql = "UPDATE productos
+                    SET precio_compra = :precio_compra,
+                        precio_venta = :precio_venta,
+                        estado = :estado,
+                        descripcion = :descripcion,
+                        fecha_modificacion = NOW(),
+                        id_usuario_modificacion = :id_usuario
+                    WHERE id_producto = :id_producto";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':precio_compra' => $precio_compra,
+                ':precio_venta'  => $precio_venta,
+                ':estado'        => $estado,
+                ':descripcion'   => $descripcion,
+                ':id_usuario'    => $id_usuario,
+                ':id_producto'   => $id_producto,
             ]);
-        } catch (PDOException $e) {
+
+            $this->registrarAuditoria($id_producto, $id_usuario, 'MODIFICACION', 'Se actualizó precio de compra, precio de venta, estado o descripción.');
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
             return false;
         }
     }
 
-    /** Suma (positivo) o resta (negativo) unidades al stock. */
-    public function ajustarStock(int $id, int $cantidad): bool
+    // RF 3.3 & RI 3.3: Descontinuar producto (eliminación lógica)
+    public function descontinuar(int $id_producto, int $id_usuario): bool
     {
-        $stmt = $this->db->prepare(
-            "UPDATE productos SET cantidad_stock = cantidad_stock + :cant
-             WHERE id_producto = :id"
-        );
-        return $stmt->execute([':cant' => $cantidad, ':id' => $id]);
-    }
+        $this->db->beginTransaction();
+        try {
+            $sql = "UPDATE productos SET estado = 'inactivo' WHERE id_producto = :id_producto";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':id_producto' => $id_producto]);
 
-    public function hayStock(int $id, int $cantidad): bool
-    {
-        $stmt = $this->db->prepare("SELECT cantidad_stock FROM productos WHERE id_producto = :id");
-        $stmt->execute([':id' => $id]);
-        $row = $stmt->fetch();
-        return $row && (int) $row['cantidad_stock'] >= $cantidad;
-    }
+            $this->registrarAuditoria($id_producto, $id_usuario, 'DESCONTINUACION', 'Producto marcado como inactivo (descontinuado).');
 
-    /** RF 3.3: borrado lógico (activo/inactivo). */
-    public function cambiarEstado(int $id, string $estado, int $idUsuario): bool
-    {
-        $estado = $estado === 'inactivo' ? 'inactivo' : 'activo';
-        $stmt = $this->db->prepare(
-            "UPDATE productos SET estado = :estado, fecha_modificacion = NOW(),
-                id_usuario_modificacion = :u WHERE id_producto = :id"
-        );
-        return $stmt->execute([':estado' => $estado, ':u' => $idUsuario, ':id' => $id]);
-    }
-
-    /** RF 3.4: listado con bandera de alerta y búsqueda opcional. */
-    public function listar(?string $estado = 'activo', string $q = ''): array
-    {
-        $sql = "SELECT p.*, pr.nombre_razon_social AS proveedor,
-                    CASE WHEN p.cantidad_stock <= p.stock_minimo THEN 1 ELSE 0 END AS alerta_stock_bajo
-                FROM productos p
-                LEFT JOIN proveedores pr ON pr.id_proveedor = p.id_proveedor
-                WHERE 1 = 1";
-        $params = [];
-        if ($estado !== null) {
-            $sql .= " AND p.estado = :estado";
-            $params[':estado'] = $estado;
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return false;
         }
-        if (trim($q) !== '') {
-            // Cada aparición de :q necesita su propio nombre de marcador,
-            // porque PDO no permite repetir el mismo parámetro en modo nativo.
-            // Se usa LOWER() en ambos lados para que la búsqueda no distinga
-            // mayúsculas de minúsculas, sin depender de la collation de la BD.
-            $sql .= " AND (LOWER(p.nombre) LIKE LOWER(:q1) OR LOWER(p.codigo_barras) LIKE LOWER(:q2) OR LOWER(p.categoria) LIKE LOWER(:q3))";
-            $like = '%' . trim($q) . '%';
-            $params[':q1'] = $like;
-            $params[':q2'] = $like;
-            $params[':q3'] = $like;
-        }
-        $sql .= " ORDER BY p.nombre ASC";
+    }
+
+    public function obtenerPorCodigoBarras(string $codigo): array|false
+    {
+        $sql = "SELECT * FROM productos WHERE codigo_barras = :codigo LIMIT 1";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        $stmt->bindValue(':codigo', $codigo);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function obtenerPorId(int $id)
+    public function hayStock(int $id_producto, int $cantidad): bool
     {
-        $stmt = $this->db->prepare("SELECT * FROM productos WHERE id_producto = :id LIMIT 1");
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch();
+        $p = $this->obtenerPorId($id_producto);
+        if (!$p) return false;
+        return ((int) $p['cantidad_stock']) >= $cantidad;
     }
 
-    public function obtenerPorCodigoBarras(string $codigo)
+    private function registrarAuditoria(int $id_producto, int $id_usuario, string $accion, string $detalles): void
     {
-        $stmt = $this->db->prepare(
-            "SELECT * FROM productos WHERE codigo_barras = :cb AND estado = 'activo' LIMIT 1"
-        );
-        $stmt->execute([':cb' => $codigo]);
-        return $stmt->fetch();
-    }
-
-    /** RF 3.5: productos con stock igual o bajo el mínimo. */
-    public function conStockBajo(): array
-    {
-        return $this->db->query(
-            "SELECT id_producto, codigo_barras, nombre, categoria, cantidad_stock, stock_minimo
-             FROM productos WHERE estado = 'activo' AND cantidad_stock <= stock_minimo
-             ORDER BY cantidad_stock ASC"
-        )->fetchAll();
-    }
-
-    public function contarActivos(): int
-    {
-        return (int) $this->db->query(
-            "SELECT COUNT(*) FROM productos WHERE estado = 'activo'"
-        )->fetchColumn();
-    }
-
-    public function valorInventario(): float
-    {
-        return (float) $this->db->query(
-            "SELECT COALESCE(SUM(cantidad_stock * precio_compra), 0)
-             FROM productos WHERE estado = 'activo'"
-        )->fetchColumn();
+        try {
+            $sql = "INSERT INTO historial (tipo_accion, detalle_cambio, id_usuario)
+                    VALUES (:accion, :detalles, :id_usuario)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':id_usuario' => $id_usuario,
+                ':accion'     => $accion,
+                ':detalles'   => "Producto #$id_producto: $detalles",
+            ]);
+        } catch (\Throwable $e) {
+            // Evita romper la transacción si la tabla historial varía
+        }
     }
 }
+
+// Alias de clase para compatibilidad
+class ProductoModel extends Producto {}

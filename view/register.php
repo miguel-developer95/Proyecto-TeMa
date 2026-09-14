@@ -44,8 +44,24 @@ if (isset($_SESSION['user'])) {
                 </p>
             <?php endif; ?>
 
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'short_password'): ?>
+                <p
+                    style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    La contraseña debe tener al menos 8 caracteres.
+                </p>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'password_mismatch'): ?>
+                <p
+                    style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    Las contraseñas no coinciden. Por favor verifica.
+                </p>
+            <?php endif; ?>
+
+            <p id="clientError" style="display:none; color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center; margin-bottom: 15px;"></p>
+
             <!-- Formulario configurado hacia el controlador -->
-            <form action="/Proyecto-TeMa/index.php" method="POST">
+            <form id="registerForm" action="/Proyecto-TeMa/index.php" method="POST">
                 <input type="hidden" name="action" value="register">
 
                 <div class="input-group">
@@ -64,6 +80,7 @@ if (isset($_SESSION['user'])) {
                         <option value="">Selecciona un rol</option>
                         <option value="Administrador">Administrador</option>
                         <option value="Vendedor">Vendedor</option>
+                        <option value="Cajero">Cajero</option>
                     </select>
                 </div>
 
@@ -79,8 +96,14 @@ if (isset($_SESSION['user'])) {
 
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
-                    <input type="password" id="password" name="password" placeholder="Contraseña" required>
+                    <input type="password" id="password" name="password" placeholder="Contraseña (mínimo 8 caracteres)" required minlength="8">
                     <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirmar Contraseña (mínimo 8 caracteres)" required minlength="8">
+                    <i class="fa-solid fa-eye toggle-eye" id="toggleConfirmPassword"></i>
                 </div>
 
                 <button type="submit">Registrarme</button>
@@ -97,12 +120,43 @@ if (isset($_SESSION['user'])) {
     <script>
         const toggleEye = document.getElementById('toggleEye');
         const password = document.getElementById('password');
+        const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+        const confirmPassword = document.getElementById('confirmPassword');
+        const form = document.getElementById('registerForm');
+        const clientError = document.getElementById('clientError');
 
         toggleEye.addEventListener('click', () => {
             const isPassword = password.type === 'password';
             password.type = isPassword ? 'text' : 'password';
             toggleEye.classList.toggle('fa-eye');
             toggleEye.classList.toggle('fa-eye-slash');
+        });
+
+        if (toggleConfirmPassword && confirmPassword) {
+            toggleConfirmPassword.addEventListener('click', () => {
+                const isPass = confirmPassword.type === 'password';
+                confirmPassword.type = isPass ? 'text' : 'password';
+                toggleConfirmPassword.classList.toggle('fa-eye');
+                toggleConfirmPassword.classList.toggle('fa-eye-slash');
+            });
+        }
+
+        form.addEventListener('submit', (e) => {
+            clientError.style.display = 'none';
+            if (password.value.length < 8) {
+                e.preventDefault();
+                clientError.textContent = 'La contraseña debe contener al menos 8 caracteres.';
+                clientError.style.display = 'block';
+                password.focus();
+                return;
+            }
+            if (password.value !== confirmPassword.value) {
+                e.preventDefault();
+                clientError.textContent = 'Las contraseñas no coinciden. Por favor verifica.';
+                clientError.style.display = 'block';
+                confirmPassword.focus();
+                return;
+            }
         });
     </script>
 

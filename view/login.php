@@ -1,9 +1,3 @@
-<?php if (isset($_GET['sesion_expirada'])): ?>
-    <div class="alerta alerta-info">
-        Tu sesión se cerró automáticamente por inactividad. Por favor, inicia sesión nuevamente.
-    </div>
-<?php endif; ?>
-
 <?php
 date_default_timezone_set('America/Bogota');
 // Deshabilitar la memoria caché del navegador
@@ -43,10 +37,30 @@ if (isset($_SESSION['user'])) {
             <p class="subtitle">Ingresa para continuar</p>
 
             <!-- Alertas dinámicas -->
+            <?php if (isset($_GET['sesion_expirada'])): ?>
+                <p style="color: #0288d1; background-color: #e1f5fe; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Tu sesión se cerró automáticamente por inactividad. Por favor, inicia sesión nuevamente.
+                </p>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['status']) && $_GET['status'] === 'password_actualizada'): ?>
+                <p
+                    style="color: #2e7d32; background-color: #e8f5e9; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    Contraseña actualizada exitosamente. Inicia sesión con tus nuevas credenciales.
+                </p>
+            <?php endif; ?>
+
             <?php if (isset($_GET['error']) && $_GET['error'] === 'invalid_credentials'): ?>
                 <p
                     style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
                     Usuario o contraseña incorrectos.
+                </p>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'short_password'): ?>
+                <p
+                    style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    La contraseña debe tener al menos 8 caracteres.
                 </p>
             <?php endif; ?>
 
@@ -75,7 +89,7 @@ if (isset($_SESSION['user'])) {
 
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
-                    <input type="password" id="password" name="password" placeholder="Contraseña" required>
+                    <input type="password" id="password" name="password" placeholder="Contraseña (mínimo 8 caracteres)" required minlength="8">
                     <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
                 </div>
 

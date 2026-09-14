@@ -15,26 +15,30 @@ class Proveedores
 
     /**
      * Registra un nuevo proveedor (RF 4.2).
-     *
-     * @param array $datos Debe incluir: nom_proveedor, nit, direccion,
-     *                      telefono, correo_electronico
-     * @return int Id del proveedor insertado.
+     * Soporta tanto la nomenclatura nueva (nombre_razon_social, identificacion_nit)
+     * como la anterior (nom_proveedor, nit).
      */
     public function registrarProveedor(array $datos): int
     {
+        $nombre = trim($datos['nombre_razon_social'] ?? $datos['nom_proveedor'] ?? '');
+        $nit = trim($datos['identificacion_nit'] ?? $datos['nit'] ?? '');
+        $direccion = trim($datos['direccion'] ?? '');
+        $telefono = trim($datos['telefono'] ?? '');
+        $correo = trim($datos['correo_electronico'] ?? '');
+
         $sql = "INSERT INTO {$this->tabla} (
-                    nom_proveedor, nit, direccion, telefono, correo_electronico, estado
+                    nombre_razon_social, identificacion_nit, direccion, telefono, correo_electronico, estado
                 ) VALUES (
-                    :nomProveedor, :nit, :direccion, :telefono, :correoElectronico, 'activo'
+                    :nombreRazonSocial, :nit, :direccion, :telefono, :correoElectronico, 'activo'
                 )";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
-            ':nomProveedor'      => $datos['nom_proveedor'],
-            ':nit'               => $datos['nit'],
-            ':direccion'         => $datos['direccion'],
-            ':telefono'          => $datos['telefono'],
-            ':correoElectronico' => $datos['correo_electronico'],
+            ':nombreRazonSocial' => $nombre,
+            ':nit'               => $nit,
+            ':direccion'         => $direccion,
+            ':telefono'          => $telefono,
+            ':correoElectronico' => $correo,
         ]);
 
         return (int) $this->conn->lastInsertId();
@@ -45,7 +49,7 @@ class Proveedores
      */
     public function existeNit(string $nit, ?int $idProveedorExcluir = null): bool
     {
-        $sql = "SELECT COUNT(*) AS total FROM {$this->tabla} WHERE nit = :nit";
+        $sql = "SELECT COUNT(*) AS total FROM {$this->tabla} WHERE identificacion_nit = :nit";
         $params = [':nit' => $nit];
 
         if ($idProveedorExcluir !== null) {
@@ -57,7 +61,7 @@ class Proveedores
         $stmt->execute($params);
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return (int) $resultado['total'] > 0;
+        return ((int) ($resultado['total'] ?? 0)) > 0;
     }
 
     /**
@@ -65,8 +69,15 @@ class Proveedores
      */
     public function actualizarProveedor(int $idProveedor, array $datos): bool
     {
+        $nombre = trim($datos['nombre_razon_social'] ?? $datos['nom_proveedor'] ?? '');
+        $nit = trim($datos['identificacion_nit'] ?? $datos['nit'] ?? '');
+        $direccion = trim($datos['direccion'] ?? '');
+        $telefono = trim($datos['telefono'] ?? '');
+        $correo = trim($datos['correo_electronico'] ?? '');
+
         $sql = "UPDATE {$this->tabla}
-                SET nom_proveedor = :nomProveedor,
+                SET nombre_razon_social = :nombreRazonSocial,
+                    identificacion_nit = :nit,
                     direccion = :direccion,
                     telefono = :telefono,
                     correo_electronico = :correoElectronico
@@ -74,17 +85,17 @@ class Proveedores
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
-            ':nomProveedor'      => $datos['nom_proveedor'],
-            ':direccion'         => $datos['direccion'],
-            ':telefono'          => $datos['telefono'],
-            ':correoElectronico' => $datos['correo_electronico'],
+            ':nombreRazonSocial' => $nombre,
+            ':nit'               => $nit,
+            ':direccion'         => $direccion,
+            ':telefono'          => $telefono,
+            ':correoElectronico' => $correo,
             ':idProveedor'       => $idProveedor,
         ]);
     }
 
     /**
-     * Desactiva un proveedor (eliminación lógica), manteniendo su historial
-     * de compras asociadas intacto.
+     * Desactiva un proveedor (eliminación lógica).
      */
     public function desactivarProveedor(int $idProveedor): bool
     {
@@ -105,12 +116,14 @@ class Proveedores
 
     /**
      * Lista los proveedores, filtrando opcionalmente por estado.
-     *
-     * @param string|null $estado 'activo' | 'inactivo' | null (todos)
+     * Retorna alias nom_proveedor y nit para retrocompatibilidad total.
      */
     public function listarProveedores(?string $estado = 'activo'): array
     {
-        $sql = "SELECT * FROM {$this->tabla}";
+        $sql = "SELECT id_proveedor, identificacion_nit, nombre_razon_social, direccion,
+                       telefono, correo_electronico, estado, creado_en,
+                       nombre_razon_social AS nom_proveedor, identificacion_nit AS nit
+                FROM {$this->tabla}";
         $params = [];
 
         if ($estado !== null) {
@@ -118,7 +131,7 @@ class Proveedores
             $params[':estado'] = $estado;
         }
 
-        $sql .= " ORDER BY nom_proveedor ASC";
+        $sql .= " ORDER BY nombre_razon_social ASC";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
@@ -127,11 +140,16 @@ class Proveedores
     }
 
     /**
-     * Obtiene un proveedor por su ID, para asociarlo a un producto o a una compra.
+     * Obtiene un proveedor por su ID.
      */
     public function obtenerPorId(int $idProveedor): ?array
     {
-        $sql = "SELECT * FROM {$this->tabla} WHERE id_proveedor = :idProveedor";
+        $sql = "SELECT id_proveedor, identificacion_nit, nombre_razon_social, direccion,
+                       telefono, correo_electronico, estado, creado_en,
+                       nombre_razon_social AS nom_proveedor, identificacion_nit AS nit
+                FROM {$this->tabla}
+                WHERE id_proveedor = :idProveedor";
+
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([':idProveedor' => $idProveedor]);
 
@@ -140,14 +158,17 @@ class Proveedores
     }
 
     /**
-     * Búsqueda de proveedores por nombre (para selección rápida al registrar
-     * una compra o un producto).
+     * Búsqueda de proveedores por nombre o NIT.
      */
     public function buscarPorNombre(string $texto): array
     {
-        $sql = "SELECT * FROM {$this->tabla}
-                WHERE nom_proveedor LIKE :texto AND estado = 'activo'
-                ORDER BY nom_proveedor ASC";
+        $sql = "SELECT id_proveedor, identificacion_nit, nombre_razon_social, direccion,
+                       telefono, correo_electronico, estado, creado_en,
+                       nombre_razon_social AS nom_proveedor, identificacion_nit AS nit
+                FROM {$this->tabla}
+                WHERE (nombre_razon_social LIKE :texto OR identificacion_nit LIKE :texto)
+                  AND estado = 'activo'
+                ORDER BY nombre_razon_social ASC";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([':texto' => '%' . $texto . '%']);

@@ -23,10 +23,10 @@ $paginaActual = basename($_SERVER['PHP_SELF']);
                     </a>
                 </li>
 
-                <li class="<?= $paginaActual === 'inventario.php' ? 'active' : '' ?>">
-                    <a href="/Proyecto-TeMa/view/inventario.php">
+                <li class="<?= $paginaActual === 'producto.php' ? 'active' : '' ?>">
+                    <a href="/Proyecto-TeMa/view/producto.php">
                         <i class="fa-solid fa-box"></i> Inventario
-                    </a>
+                    </a>    
                 </li>
 
                 <li class="<?= $paginaActual === 'compra.php' ? 'active' : '' ?>">

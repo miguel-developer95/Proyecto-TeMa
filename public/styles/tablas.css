@@ -1,0 +1,132 @@
+/* tablas.css — estilos para vistas de gestión (inventario, compras, etc.) */
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px 20px 40px;
+}
+
+.container h2 {
+    color: #2b3a55;
+    font-size: 26px;
+    margin-bottom: 20px;
+    border-left: 5px solid #e63c82;
+    padding-left: 12px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(230, 60, 130, 0.08);
+}
+
+.table thead {
+    background: linear-gradient(135deg, #ff4f93, #e63c82);
+}
+
+.table thead th {
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 16px;
+    text-align: left;
+}
+
+.table tbody td {
+    padding: 14px 16px;
+    font-size: 14px;
+    color: #2b3a55;
+    border-bottom: 1px solid #f5e3ec;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table tbody tr:hover {
+    background-color: #fdf1f6;
+}
+
+.table tbody tr.table-danger {
+    background-color: #fff3f3;
+}
+
+.table tbody tr.table-danger:hover {
+    background-color: #ffe6e6;
+}
+
+/* Badges de estado */
+.badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge.bg-success {
+    background-color: #d7f5e3;
+    color: #1e8a4c;
+}
+
+.badge.bg-secondary {
+    background-color: #eee;
+    color: #777;
+}
+
+.badge.bg-warning {
+    background-color: #fff3cd;
+    color: #997404;
+    margin-left: 6px;
+}
+
+/* Botones de acción dentro de la tabla */
+.btn {
+    display: inline-block;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: opacity 0.2s, transform 0.15s;
+}
+
+.btn-sm {
+    padding: 7px 14px;
+    margin: 2px 4px 2px 0;
+}
+
+.btn-primary {
+    background-color: #2b3a55;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background-color: #fff;
+    color: #e63c82;
+    border: 1.5px solid #e63c82;
+}
+
+.btn-danger:hover {
+    background-color: #e63c82;
+    color: #fff;
+}
+
+/* Responsive: scroll horizontal en pantallas pequeñas */
+@media (max-width: 768px) {
+    .table-responsive-wrapper {
+        overflow-x: auto;
+    }
+}

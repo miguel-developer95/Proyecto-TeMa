@@ -1,6 +1,6 @@
-<?php 
-
-require_once __DIR__ . '/conexion.php';
+<?php
+// model/informes.php - RF 2.1 & RF 2.2: Informes de ganancia real y rotación de inventario.
+require_once __DIR__ . '/../config/connection.php';
 
 class Informes
 {
@@ -8,46 +8,50 @@ class Informes
 
     public function __construct()
     {
-        // conexion.php debe exponer una instancia PDO en $pdo
-        global $pdo;
-        $this->pdo = $pdo;
+        $this->pdo = (new Connection())->conn;
+    }
+
+    private function formatearRangoFechas(string $fechaInicio, string $fechaFin): array
+    {
+        $inicio = (strlen(trim($fechaInicio)) === 10) ? trim($fechaInicio) . ' 00:00:00' : trim($fechaInicio);
+        $fin = (strlen(trim($fechaFin)) === 10) ? trim($fechaFin) . ' 23:59:59' : trim($fechaFin);
+        return [$inicio, $fin];
     }
 
     /* =========================================================
      * RF 2.1 - Ganancia real por producto o por categoría
-     * Ganancia = (precio_venta - precio_compra) * cantidad_vendida
+     * Ganancia Real = (precio_venta - precio_compra) * cantidad_vendida
      * ========================================================= */
 
     /**
      * Calcula la ganancia real agrupada por producto dentro de un rango de fechas.
-     *
-     * @param string $fechaInicio formato 'YYYY-MM-DD'
-     * @param string $fechaFin    formato 'YYYY-MM-DD'
-     * @return array Lista de productos con cantidad vendida, ingresos, costo y ganancia.
      */
     public function gananciaPorProducto(string $fechaInicio, string $fechaFin): array
     {
+        [$inicio, $fin] = $this->formatearRangoFechas($fechaInicio, $fechaFin);
+
         $sql = "SELECT
                     p.id_producto,
                     p.codigo_barras,
                     p.nombre,
                     p.categoria,
-                    SUM(dv.cantidad)                                   AS cantidad_vendida,
-                    SUM(dv.cantidad * dv.precio_unitario)               AS total_ingresos,
-                    SUM(dv.cantidad * p.precio_compra)                  AS total_costo,
+                    p.precio_compra,
+                    SUM(dv.cantidad)                                         AS cantidad_vendida,
+                    SUM(dv.cantidad * dv.precio_unitario)                     AS total_ingresos,
+                    SUM(dv.cantidad * p.precio_compra)                        AS total_costo,
                     SUM(dv.cantidad * (dv.precio_unitario - p.precio_compra)) AS ganancia_real
-                FROM DETALLE_VENTA dv
-                INNER JOIN PRODUCTOS p ON p.id_producto = dv.id_producto
-                INNER JOIN VENTA v ON v.id_venta = dv.id_venta
+                FROM detalle_ventas dv
+                INNER JOIN productos p ON p.id_producto = dv.id_producto
+                INNER JOIN ventas v ON v.id_venta = dv.id_venta
                 WHERE v.fecha BETWEEN :fechaInicio AND :fechaFin
                   AND v.estado = 'completada'
-                GROUP BY p.id_producto, p.codigo_barras, p.nombre, p.categoria
+                GROUP BY p.id_producto, p.codigo_barras, p.nombre, p.categoria, p.precio_compra
                 ORDER BY ganancia_real DESC";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
-            ':fechaInicio' => $fechaInicio,
-            ':fechaFin'    => $fechaFin,
+            ':fechaInicio' => $inicio,
+            ':fechaFin'    => $fin,
         ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -58,24 +62,27 @@ class Informes
      */
     public function gananciaPorCategoria(string $fechaInicio, string $fechaFin): array
     {
+        [$inicio, $fin] = $this->formatearRangoFechas($fechaInicio, $fechaFin);
+
         $sql = "SELECT
-                    p.categoria,
-                    SUM(dv.cantidad)                                   AS cantidad_vendida,
-                    SUM(dv.cantidad * dv.precio_unitario)               AS total_ingresos,
-                    SUM(dv.cantidad * p.precio_compra)                  AS total_costo,
+                    COALESCE(NULLIF(TRIM(p.categoria), ''), 'Sin categoría') AS categoria,
+                    COUNT(DISTINCT p.id_producto)                            AS productos_distintos,
+                    SUM(dv.cantidad)                                         AS cantidad_vendida,
+                    SUM(dv.cantidad * dv.precio_unitario)                     AS total_ingresos,
+                    SUM(dv.cantidad * p.precio_compra)                        AS total_costo,
                     SUM(dv.cantidad * (dv.precio_unitario - p.precio_compra)) AS ganancia_real
-                FROM DETALLE_VENTA dv
-                INNER JOIN PRODUCTOS p ON p.id_producto = dv.id_producto
-                INNER JOIN VENTA v ON v.id_venta = dv.id_venta
+                FROM detalle_ventas dv
+                INNER JOIN productos p ON p.id_producto = dv.id_producto
+                INNER JOIN ventas v ON v.id_venta = dv.id_venta
                 WHERE v.fecha BETWEEN :fechaInicio AND :fechaFin
                   AND v.estado = 'completada'
-                GROUP BY p.categoria
+                GROUP BY COALESCE(NULLIF(TRIM(p.categoria), ''), 'Sin categoría')
                 ORDER BY ganancia_real DESC";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
-            ':fechaInicio' => $fechaInicio,
-            ':fechaFin'    => $fechaFin,
+            ':fechaInicio' => $inicio,
+            ':fechaFin'    => $fin,
         ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -87,31 +94,31 @@ class Informes
 
     /**
      * Devuelve los productos más vendidos (mayor rotación) en un rango de fechas.
-     *
-     * @param string $fechaInicio
-     * @param string $fechaFin
-     * @param int    $limite Cantidad de productos a retornar (top N).
      */
     public function productosMasVendidos(string $fechaInicio, string $fechaFin, int $limite = 10): array
     {
+        [$inicio, $fin] = $this->formatearRangoFechas($fechaInicio, $fechaFin);
+
         $sql = "SELECT
                     p.id_producto,
                     p.codigo_barras,
                     p.nombre,
                     p.categoria,
-                    SUM(dv.cantidad) AS unidades_vendidas
-                FROM DETALLE_VENTA dv
-                INNER JOIN PRODUCTOS p ON p.id_producto = dv.id_producto
-                INNER JOIN VENTA v ON v.id_venta = dv.id_venta
+                    p.cantidad_stock,
+                    SUM(dv.cantidad)                      AS unidades_vendidas,
+                    SUM(dv.cantidad * dv.precio_unitario)  AS total_recaudado
+                FROM detalle_ventas dv
+                INNER JOIN productos p ON p.id_producto = dv.id_producto
+                INNER JOIN ventas v ON v.id_venta = dv.id_venta
                 WHERE v.fecha BETWEEN :fechaInicio AND :fechaFin
                   AND v.estado = 'completada'
-                GROUP BY p.id_producto, p.codigo_barras, p.nombre, p.categoria
+                GROUP BY p.id_producto, p.codigo_barras, p.nombre, p.categoria, p.cantidad_stock
                 ORDER BY unidades_vendidas DESC
                 LIMIT :limite";
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':fechaInicio', $fechaInicio);
-        $stmt->bindValue(':fechaFin', $fechaFin);
+        $stmt->bindValue(':fechaInicio', $inicio);
+        $stmt->bindValue(':fechaFin', $fin);
         $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -124,18 +131,23 @@ class Informes
      */
     public function productosBajaRotacion(string $fechaInicio, string $fechaFin): array
     {
+        [$inicio, $fin] = $this->formatearRangoFechas($fechaInicio, $fechaFin);
+
         $sql = "SELECT
                     p.id_producto,
                     p.codigo_barras,
                     p.nombre,
                     p.categoria,
-                    p.cantidad_stock
-                FROM PRODUCTOS p
+                    p.precio_venta,
+                    p.precio_compra,
+                    p.cantidad_stock,
+                    p.stock_minimo
+                FROM productos p
                 WHERE p.estado = 'activo'
                   AND p.id_producto NOT IN (
                       SELECT dv.id_producto
-                      FROM DETALLE_VENTA dv
-                      INNER JOIN VENTA v ON v.id_venta = dv.id_venta
+                      FROM detalle_ventas dv
+                      INNER JOIN ventas v ON v.id_venta = dv.id_venta
                       WHERE v.fecha BETWEEN :fechaInicio AND :fechaFin
                         AND v.estado = 'completada'
                   )
@@ -143,87 +155,45 @@ class Informes
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
-            ':fechaInicio' => $fechaInicio,
-            ':fechaFin'    => $fechaFin,
+            ':fechaInicio' => $inicio,
+            ':fechaFin'    => $fin,
         ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Guarda un registro de informe generado en la tabla INFORMES,
-     * para trazabilidad (ID único, fecha de generación, tipo y descripción).
-     *
-     * @param string $tipoInforme  Ej: 'Ganancias', 'Productos Más Vendidos', 'Productos de Baja Rotación'
-     * @param string $descripcion  Resumen textual de los resultados obtenidos.
-     * @param int    $idUsuario    Usuario que generó el informe.
-     * @return int Id del informe insertado.
+     * Obtiene métricas rápidas consolidadas para el Dashboard
      */
-    public function guardarInforme(string $tipoInforme, string $descripcion, int $idUsuario): int
+    public function obtenerMetricasDashboard(): array
     {
-        $sql = "INSERT INTO INFORMES (tipo_informe, descripcion, fecha_generacion, id_usuario)
-                VALUES (:tipoInforme, :descripcion, NOW(), :idUsuario)";
+        // 1. Ventas del día
+        $sqlVentasHoy = "SELECT COALESCE(SUM(total), 0) AS ventas_hoy
+                         FROM ventas
+                         WHERE DATE(fecha) = CURDATE() AND estado = 'completada'";
+        $stmtVentas = $this->pdo->query($sqlVentasHoy);
+        $ventasHoy = (float) ($stmtVentas->fetch(PDO::FETCH_ASSOC)['ventas_hoy'] ?? 0);
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':tipoInforme' => $tipoInforme,
-            ':descripcion' => $descripcion,
-            ':idUsuario'   => $idUsuario,
-        ]);
+        // 2. Total productos activos
+        $sqlProds = "SELECT COUNT(*) AS total_productos FROM productos WHERE estado = 'activo'";
+        $stmtProds = $this->pdo->query($sqlProds);
+        $totalProductos = (int) ($stmtProds->fetch(PDO::FETCH_ASSOC)['total_productos'] ?? 0);
 
-        return (int) $this->pdo->lastInsertId();
-    }
+        // 3. Alertas de stock bajo
+        $sqlStockBajo = "SELECT COUNT(*) AS stock_bajo FROM productos WHERE estado = 'activo' AND cantidad_stock <= stock_minimo";
+        $stmtStock = $this->pdo->query($sqlStockBajo);
+        $alertasStock = (int) ($stmtStock->fetch(PDO::FETCH_ASSOC)['stock_bajo'] ?? 0);
 
-    /**
-     * Lista el historial de informes generados, opcionalmente filtrado por tipo.
-     */
-    public function historialInformes(?string $tipoInforme = null): array
-    {
-        if ($tipoInforme !== null) {
-            $sql = "SELECT * FROM INFORMES WHERE tipo_informe = :tipoInforme ORDER BY fecha_generacion DESC";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([':tipoInforme' => $tipoInforme]);
-        } else {
-            $sql = "SELECT * FROM INFORMES ORDER BY fecha_generacion DESC";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute();
-        }
+        // 4. Total usuarios registrados
+        $sqlUsuarios = "SELECT COUNT(*) AS total_usuarios FROM usuarios";
+        $stmtUsuarios = $this->pdo->query($sqlUsuarios);
+        $totalUsuarios = (int) ($stmtUsuarios->fetch(PDO::FETCH_ASSOC)['total_usuarios'] ?? 0);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /* =========================================================
-     * RF 2.3 - Matriz de permisos (Administrador vs Vendedor)
-     * ========================================================= */
-
-    /**
-     * Verifica si un usuario tiene permiso para acceder a los informes
-     * o para realizar acciones administrativas (anular ventas, cambiar precios).
-     *
-     * Asume que la tabla USUARIO tiene una columna id_rol y que ROLES/PERMISOS
-     * define qué puede hacer cada rol. Ajusta los nombres según tu script SQL final.
-     *
-     * @param int    $idUsuario
-     * @param string $permiso  Ej: 'ver_informes', 'anular_venta', 'cambiar_precio'
-     */
-    public function usuarioTienePermiso(int $idUsuario, string $permiso): bool
-    {
-        $sql = "SELECT COUNT(*) AS total
-                FROM USUARIO u
-                INNER JOIN ROLES r ON r.id_rol = u.id_rol
-                INNER JOIN ROL_PERMISO rp ON rp.id_rol = r.id_rol
-                INNER JOIN PERMISOS pe ON pe.id_permiso = rp.id_permiso
-                WHERE u.id_usuario = :idUsuario
-                  AND pe.nombre_permiso = :permiso";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':idUsuario' => $idUsuario,
-            ':permiso'   => $permiso,
-        ]);
-
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $resultado && (int) $resultado['total'] > 0;
+        return [
+            'ventas_hoy'      => $ventasHoy,
+            'total_productos' => $totalProductos,
+            'alertas_stock'   => $alertasStock,
+            'total_usuarios'  => $totalUsuarios,
+        ];
     }
 }
-

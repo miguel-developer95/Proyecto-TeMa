@@ -8,7 +8,7 @@ define('TIEMPO_INACTIVIDAD_MAX', 1800); // 30 minutos en segundos
 
 // 1. Verificar autenticación (tu lógica actual)
 if (!isset($_SESSION['user'])) {
-    header('Location: /Proyecto-TeMa/login.php');
+    header('Location: /Proyecto-TeMa/view/login.php');
     exit;
 }
 
@@ -19,7 +19,7 @@ if (isset($_SESSION['last_activity'])) {
     if ($tiempoInactivo > TIEMPO_INACTIVIDAD_MAX) {
         session_unset();
         session_destroy();
-        header('Location: /Proyecto-TeMa/login.php?sesion_expirada=1');
+        header('Location: /Proyecto-TeMa/view/login.php?sesion_expirada=1');
         exit;
     }
 }

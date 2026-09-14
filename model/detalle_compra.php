@@ -6,7 +6,7 @@ class DetalleCompra
 {
     /** @var PDO */
     private PDO $conn;
-    private string $tabla = 'detalle_compra';
+    private string $tabla = 'detalle_compras';
 
     public function __construct()
     {
@@ -14,41 +14,86 @@ class DetalleCompra
     }
 
     /**
-     * Agrega un producto (línea de detalle) a una compra (RF 4.1).
+     * Resuelve el id_producto a partir del código de barras o del id provisto.
      */
-    public function agregarDetalle(int $id_compra, string $codigo_barras, int $cantidad_producto, float $precio_unitario): bool
+    public function resolverIdProducto(string|int $identificador): ?int
     {
-        $sql = "INSERT INTO {$this->tabla} (id_compra, codigo_barras, cantidad_producto, precio_unitario)
-                VALUES (:id_compra, :codigo_barras, :cantidad_producto, :precio_unitario)";
+        // 1. Buscar por codigo_barras
+        $stmt = $this->conn->prepare("SELECT id_producto FROM productos WHERE codigo_barras = :codigo LIMIT 1");
+        $stmt->execute([':codigo' => (string) $identificador]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            return (int) $row['id_producto'];
+        }
 
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
-        $stmt->bindParam(':codigo_barras', $codigo_barras);
-        $stmt->bindParam(':cantidad_producto', $cantidad_producto, PDO::PARAM_INT);
-        $stmt->bindParam(':precio_unitario', $precio_unitario);
+        // 2. Si no encontró por código, intentar por id_producto directo si es numérico
+        if (is_numeric($identificador)) {
+            $stmt = $this->conn->prepare("SELECT id_producto FROM productos WHERE id_producto = :id LIMIT 1");
+            $stmt->execute([':id' => (int) $identificador]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                return (int) $row['id_producto'];
+            }
+        }
 
-        return $stmt->execute();
+        return null;
     }
 
     /**
-     * Agrega varias líneas de una vez (útil al registrar la compra completa).
+     * Agrega un producto (línea de detalle) a una compra (RF 4.1).
+     */
+    public function agregarDetalle(int $id_compra, string|int $codigo_o_id, int $cantidad, float $precio_unitario): bool
+    {
+        $id_producto = $this->resolverIdProducto($codigo_o_id);
+        if (!$id_producto) {
+            return false;
+        }
+
+        $sql = "INSERT INTO {$this->tabla} (id_compra, id_producto, cantidad, precio_unitario_compra)
+                VALUES (:id_compra, :id_producto, :cantidad, :precio_unitario)";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
+        $stmt->bindValue(':id_producto', $id_producto, PDO::PARAM_INT);
+        $stmt->bindValue(':cantidad', $cantidad, PDO::PARAM_INT);
+        $stmt->bindValue(':precio_unitario', $precio_unitario);
+
+        $ok = $stmt->execute();
+        if ($ok) {
+            // Actualizar stock y precio de compra en inventario
+            $upd = $this->conn->prepare(
+                "UPDATE productos
+                 SET cantidad_stock = cantidad_stock + :cantidad,
+                     precio_compra = :precio_compra
+                 WHERE id_producto = :id_producto"
+            );
+            $upd->execute([
+                ':cantidad'      => $cantidad,
+                ':precio_compra' => $precio_unitario,
+                ':id_producto'   => $id_producto,
+            ]);
+        }
+
+        return $ok;
+    }
+
+    /**
+     * Agrega varias líneas de una vez al registrar una compra.
      *
      * @param array $items Cada item: ['codigo_barras' => ..., 'cantidad_producto' => ..., 'precio_unitario' => ...]
      */
     public function agregarDetalles(int $id_compra, array $items): bool
     {
-        $sql = "INSERT INTO {$this->tabla} (id_compra, codigo_barras, cantidad_producto, precio_unitario)
-                VALUES (:id_compra, :codigo_barras, :cantidad_producto, :precio_unitario)";
-        $stmt = $this->conn->prepare($sql);
-
         foreach ($items as $item) {
-            $ok = $stmt->execute([
-                ':id_compra'         => $id_compra,
-                ':codigo_barras'     => $item['codigo_barras'],
-                ':cantidad_producto' => $item['cantidad_producto'],
-                ':precio_unitario'   => $item['precio_unitario'],
-            ]);
-            if (!$ok) {
+            $codigo = $item['codigo_barras'] ?? $item['id_producto'] ?? '';
+            $cantidad = (int) ($item['cantidad_producto'] ?? $item['cantidad'] ?? 0);
+            $precio = (float) ($item['precio_unitario'] ?? $item['precio_unitario_compra'] ?? 0);
+
+            if ($cantidad <= 0 || empty($codigo)) {
+                continue;
+            }
+
+            if (!$this->agregarDetalle($id_compra, $codigo, $cantidad, $precio)) {
                 return false;
             }
         }
@@ -57,21 +102,20 @@ class DetalleCompra
     }
 
     /**
-     * Obtiene todas las líneas de detalle de una compra, con el nombre
-     * del producto (asume tabla `productos` con columna `nombre_producto`
-     * relacionada por `codigo_barras` — ajustar si el nombre real difiere).
+     * Obtiene todas las líneas de detalle de una compra.
      */
     public function obtenerPorCompra(int $id_compra): array
     {
-        $sql = "SELECT dc.id_compra, dc.codigo_barras, dc.cantidad_producto, dc.precio_unitario,
-                       (dc.cantidad_producto * dc.precio_unitario) AS subtotal,
-                       p.nombre_producto
+        $sql = "SELECT dc.id_compra, dc.id_producto, dc.cantidad, dc.cantidad AS cantidad_producto,
+                       dc.precio_unitario_compra, dc.precio_unitario_compra AS precio_unitario,
+                       (dc.cantidad * dc.precio_unitario_compra) AS subtotal,
+                       p.codigo_barras, p.nombre AS nombre_producto
                 FROM {$this->tabla} dc
-                LEFT JOIN productos p ON p.codigo_barras = dc.codigo_barras
+                LEFT JOIN productos p ON p.id_producto = dc.id_producto
                 WHERE dc.id_compra = :id_compra";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -79,64 +123,29 @@ class DetalleCompra
 
     /**
      * Calcula el total de una compra a partir de sus líneas de detalle.
-     * Útil para validar/recalcular `compra.total_compra`.
      */
     public function calcularTotalCompra(int $id_compra): float
     {
-        $sql = "SELECT COALESCE(SUM(cantidad_producto * precio_unitario), 0) AS total
+        $sql = "SELECT COALESCE(SUM(cantidad * precio_unitario_compra), 0) AS total
                 FROM {$this->tabla} WHERE id_compra = :id_compra";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
         $stmt->execute();
 
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (float) $resultado['total'];
+        return (float) ($resultado['total'] ?? 0);
     }
 
     /**
-     * Actualiza cantidad y/o precio de una línea de detalle específica
-     * (usado en RF 4.4 — modificación de compras).
-     */
-    public function actualizarDetalle(int $id_compra, string $codigo_barras, int $cantidad_producto, float $precio_unitario): bool
-    {
-        $sql = "UPDATE {$this->tabla}
-                SET cantidad_producto = :cantidad_producto, precio_unitario = :precio_unitario
-                WHERE id_compra = :id_compra AND codigo_barras = :codigo_barras";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':cantidad_producto', $cantidad_producto, PDO::PARAM_INT);
-        $stmt->bindParam(':precio_unitario', $precio_unitario);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
-        $stmt->bindParam(':codigo_barras', $codigo_barras);
-
-        return $stmt->execute();
-    }
-
-    /**
-     * Elimina una línea de detalle puntual.
-     */
-    public function eliminarDetalle(int $id_compra, string $codigo_barras): bool
-    {
-        $sql = "DELETE FROM {$this->tabla} WHERE id_compra = :id_compra AND codigo_barras = :codigo_barras";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
-        $stmt->bindParam(':codigo_barras', $codigo_barras);
-
-        return $stmt->execute();
-    }
-
-    /**
-     * Elimina todas las líneas de una compra (por ejemplo, antes de
-     * reemplazarlas por completo en una edición).
+     * Elimina las líneas de una compra.
      */
     public function eliminarPorCompra(int $id_compra): bool
     {
         $sql = "DELETE FROM {$this->tabla} WHERE id_compra = :id_compra";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
 
         return $stmt->execute();
     }

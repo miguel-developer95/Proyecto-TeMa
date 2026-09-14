@@ -1,0 +1,344 @@
+/* public/styles/pos.css — Estilos para el Punto de Venta (POS) inspirados en la identidad visual de Tentaciones Marlly */
+
+.pos-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.pos-header {
+    margin-bottom: 25px;
+}
+
+.pos-header h2 {
+    color: #2b3a55;
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    border-left: 5px solid #e63c82;
+    padding-left: 12px;
+}
+
+.pos-header p.muted {
+    color: #888;
+    font-size: 14px;
+    margin-left: 17px;
+}
+
+.pos-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 0.95fr;
+    gap: 25px;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .pos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.crud-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(230, 60, 130, 0.1);
+    margin-bottom: 22px;
+    border: 1px solid #fce4ec;
+}
+
+.crud-card h3 {
+    color: #2b3a55;
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #fce4ec;
+    padding-bottom: 12px;
+}
+
+.crud-card h3 i {
+    color: #e63c82;
+}
+
+/* Formularios de búsqueda y agregado */
+.search-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.search-form input[type="text"],
+.search-form input[type="number"],
+.search-form input[type="email"],
+.form-group input,
+.form-group select {
+    flex: 1;
+    min-width: 130px;
+    padding: 10px 14px;
+    border: 1.5px solid #f3c6d8;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    color: #333;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-form input:focus,
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #e63c82;
+    box-shadow: 0 0 0 3px rgba(230, 60, 130, 0.15);
+}
+
+.qty-input {
+    max-width: 80px !important;
+    text-align: center;
+}
+
+/* Botones */
+.btn-primary {
+    background: linear-gradient(135deg, #ff4f93, #e63c82);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s, opacity 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 12px rgba(230, 60, 130, 0.25);
+    text-decoration: none;
+}
+
+.btn-primary:hover {
+    opacity: 0.95;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(230, 60, 130, 0.35);
+}
+
+.btn-cancel {
+    background: #2b3a55;
+    box-shadow: 0 4px 12px rgba(43, 58, 85, 0.2);
+}
+
+.btn-cancel:hover {
+    background: #1e293b;
+    box-shadow: 0 6px 16px rgba(43, 58, 85, 0.3);
+}
+
+.btn-secondary {
+    background: #fce4ec;
+    color: #e63c82;
+    border: 1.5px solid #f3c6d8;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #e63c82;
+    color: #fff;
+    border-color: #e63c82;
+}
+
+.btn-block {
+    width: 100%;
+    padding: 13px;
+    font-size: 16px;
+    margin-top: 15px;
+}
+
+/* Tablas en POS */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.crud-card table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+}
+
+.crud-card table th,
+.crud-card table td {
+    padding: 11px 12px;
+    text-align: left;
+    font-size: 13.5px;
+    border-bottom: 1px solid #fce4ec;
+}
+
+.crud-card table th {
+    color: #888;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11.5px;
+    letter-spacing: 0.5px;
+}
+
+.crud-card table tbody tr:hover {
+    background-color: #fdf6f9;
+}
+
+/* Botones de acción en tabla */
+.actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-edit {
+    background: #fce4ec;
+    color: #e63c82;
+}
+
+.btn-edit:hover {
+    background: #e63c82;
+    color: #fff;
+}
+
+.btn-delete {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.btn-delete:hover {
+    background: #c62828;
+    color: #fff;
+}
+
+.inline-form {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+
+/* Formulario de Checkout / Pago */
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2b3a55;
+    margin-bottom: 5px;
+}
+
+.totals-box {
+    background: #fdf1f6;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin: 18px 0;
+    border: 1px solid #f9dbe8;
+}
+
+.totals-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 15px;
+    color: #555;
+}
+
+.totals-row.total-destacado {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1.5px dashed #e63c82;
+    font-size: 20px;
+    font-weight: 700;
+    color: #e63c82;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.badge-completada {
+    background: #d7f5e3;
+    color: #1e8a4c;
+}
+
+.badge-anulada {
+    background: #ffebee;
+    color: #c62828;
+}
+
+/* Detalles de cliente rápido */
+details.quick-client {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-radius: 12px;
+    border: 1px dashed #ddd;
+    font-size: 13px;
+}
+
+details.quick-client summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #e63c82;
+    user-select: none;
+}
+
+details.quick-client form {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Alertas */
+.alert {
+    padding: 12px 18px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.alert-error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}

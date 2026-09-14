@@ -6,11 +6,13 @@ class Compra
 {
     /** @var PDO */
     private PDO $conn;
-    private string $tabla = 'compra';
+    private string $tabla = 'compras';
 
     public ?int $id_compra = null;
     public ?string $fecha_hora = null;
-    public ?string $metodo_pago = null;
+    public ?int $id_metodo_pago = null;
+    public mixed $metodo_pago = null;
+    public ?int $id_usuario = null;
     public ?string $estado = null;
     public ?float $total_compra = null;
     public ?int $id_proveedor = null;
@@ -25,18 +27,30 @@ class Compra
      */
     public function crear(): bool
     {
+        if (empty($this->id_usuario)) {
+            $this->id_usuario = (int) ($_SESSION['user']['id'] ?? $_SESSION['user']['id_usuario'] ?? 1);
+        }
+
+        if (empty($this->id_metodo_pago) && !empty($this->metodo_pago)) {
+            $this->id_metodo_pago = (int) $this->metodo_pago;
+        }
+        if (empty($this->id_metodo_pago)) {
+            $this->id_metodo_pago = 1;
+        }
+
         $sql = "INSERT INTO {$this->tabla}
-                    (fecha_hora, metodo_pago, estado, total_compra, id_proveedor)
+                    (fecha_hora, id_proveedor, id_usuario, id_metodo_pago, estado, total_compra)
                 VALUES
-                    (:fecha_hora, :metodo_pago, :estado, :total_compra, :id_proveedor)";
+                    (:fecha_hora, :id_proveedor, :id_usuario, :id_metodo_pago, :estado, :total_compra)";
 
         $stmt = $this->conn->prepare($sql);
 
-        $stmt->bindParam(':fecha_hora', $this->fecha_hora);
-        $stmt->bindParam(':metodo_pago', $this->metodo_pago);
-        $stmt->bindParam(':estado', $this->estado);
-        $stmt->bindParam(':total_compra', $this->total_compra);
-        $stmt->bindParam(':id_proveedor', $this->id_proveedor, PDO::PARAM_INT);
+        $stmt->bindValue(':fecha_hora', $this->fecha_hora ?: date('Y-m-d H:i:s'));
+        $stmt->bindValue(':id_proveedor', $this->id_proveedor, PDO::PARAM_INT);
+        $stmt->bindValue(':id_usuario', $this->id_usuario, PDO::PARAM_INT);
+        $stmt->bindValue(':id_metodo_pago', $this->id_metodo_pago, PDO::PARAM_INT);
+        $stmt->bindValue(':estado', $this->estado ?: 'registrada');
+        $stmt->bindValue(':total_compra', $this->total_compra);
 
         if ($stmt->execute()) {
             $this->id_compra = (int) $this->conn->lastInsertId();
@@ -47,16 +61,18 @@ class Compra
     }
 
     /**
-     * Historial completo de compras con nombre del proveedor (RF 4.3).
+     * Historial completo de compras con nombre del proveedor y método de pago (RF 4.3).
      */
     public function obtenerTodas(): array
     {
-        $sql = "SELECT c.id_compra, c.fecha_hora, c.metodo_pago, c.estado,
-                       c.total_compra, c.id_proveedor, p.nom_proveedor,
-                       mp.tipo_pago, mp.nombre_empresa
+        $sql = "SELECT c.id_compra, c.fecha_hora, c.id_metodo_pago, c.id_metodo_pago AS metodo_pago,
+                       c.id_usuario, c.estado, c.total_compra, c.id_proveedor,
+                       p.nombre_razon_social, p.nombre_razon_social AS nom_proveedor,
+                       mp.nombre_metodo, mp.nombre_metodo AS tipo_pago,
+                       mp.empresa, mp.empresa AS nombre_empresa
                 FROM {$this->tabla} c
                 LEFT JOIN proveedores p ON p.id_proveedor = c.id_proveedor
-                LEFT JOIN metodos_pago mp ON mp.id_pago = c.metodo_pago
+                LEFT JOIN metodos_pago mp ON mp.id_metodo_pago = c.id_metodo_pago
                 ORDER BY c.fecha_hora DESC";
 
         $stmt = $this->conn->prepare($sql);
@@ -67,21 +83,26 @@ class Compra
 
     /**
      * Obtiene una compra específica por ID.
-     *
-     * @return array|false
      */
-    public function obtenerPorId(int $id_compra)
+    public function obtenerPorId(int $id_compra): ?array
     {
-        $sql = "SELECT id_compra, fecha_hora, metodo_pago, estado, total_compra, id_proveedor
-                FROM {$this->tabla}
-                WHERE id_compra = :id_compra
+        $sql = "SELECT c.id_compra, c.fecha_hora, c.id_metodo_pago, c.id_metodo_pago AS metodo_pago,
+                       c.id_usuario, c.estado, c.total_compra, c.id_proveedor,
+                       p.nombre_razon_social, p.nombre_razon_social AS nom_proveedor,
+                       mp.nombre_metodo, mp.nombre_metodo AS tipo_pago,
+                       mp.empresa, mp.empresa AS nombre_empresa
+                FROM {$this->tabla} c
+                LEFT JOIN proveedores p ON p.id_proveedor = c.id_proveedor
+                LEFT JOIN metodos_pago mp ON mp.id_metodo_pago = c.id_metodo_pago
+                WHERE c.id_compra = :id_compra
                 LIMIT 1";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
         $stmt->execute();
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $res = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $res ?: null;
     }
 
     /**
@@ -89,27 +110,36 @@ class Compra
      */
     public function obtenerPorProveedor(int $id_proveedor): array
     {
-        $sql = "SELECT id_compra, fecha_hora, metodo_pago, estado, total_compra, id_proveedor
-                FROM {$this->tabla}
-                WHERE id_proveedor = :id_proveedor
-                ORDER BY fecha_hora DESC";
+        $sql = "SELECT c.id_compra, c.fecha_hora, c.id_metodo_pago, c.id_metodo_pago AS metodo_pago,
+                       c.id_usuario, c.estado, c.total_compra, c.id_proveedor,
+                       p.nombre_razon_social, p.nombre_razon_social AS nom_proveedor,
+                       mp.nombre_metodo, mp.nombre_metodo AS tipo_pago,
+                       mp.empresa, mp.empresa AS nombre_empresa
+                FROM {$this->tabla} c
+                LEFT JOIN proveedores p ON p.id_proveedor = c.id_proveedor
+                LEFT JOIN metodos_pago mp ON mp.id_metodo_pago = c.id_metodo_pago
+                WHERE c.id_proveedor = :id_proveedor
+                ORDER BY c.fecha_hora DESC";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_proveedor', $id_proveedor, PDO::PARAM_INT);
+        $stmt->bindValue(':id_proveedor', $id_proveedor, PDO::PARAM_INT);
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Actualiza una compra existente (RF 4.4). La trazabilidad de este cambio
-     * (usuario responsable, fecha) debe registrarse aparte en historial_modificacion.
+     * Actualiza una compra existente (RF 4.4).
      */
     public function actualizar(): bool
     {
+        if (empty($this->id_metodo_pago) && !empty($this->metodo_pago)) {
+            $this->id_metodo_pago = (int) $this->metodo_pago;
+        }
+
         $sql = "UPDATE {$this->tabla}
                 SET fecha_hora = :fecha_hora,
-                    metodo_pago = :metodo_pago,
+                    id_metodo_pago = :id_metodo_pago,
                     estado = :estado,
                     total_compra = :total_compra,
                     id_proveedor = :id_proveedor
@@ -117,12 +147,12 @@ class Compra
 
         $stmt = $this->conn->prepare($sql);
 
-        $stmt->bindParam(':fecha_hora', $this->fecha_hora);
-        $stmt->bindParam(':metodo_pago', $this->metodo_pago);
-        $stmt->bindParam(':estado', $this->estado);
-        $stmt->bindParam(':total_compra', $this->total_compra);
-        $stmt->bindParam(':id_proveedor', $this->id_proveedor, PDO::PARAM_INT);
-        $stmt->bindParam(':id_compra', $this->id_compra, PDO::PARAM_INT);
+        $stmt->bindValue(':fecha_hora', $this->fecha_hora);
+        $stmt->bindValue(':id_metodo_pago', $this->id_metodo_pago, PDO::PARAM_INT);
+        $stmt->bindValue(':estado', $this->estado);
+        $stmt->bindValue(':total_compra', $this->total_compra);
+        $stmt->bindValue(':id_proveedor', $this->id_proveedor, PDO::PARAM_INT);
+        $stmt->bindValue(':id_compra', $this->id_compra, PDO::PARAM_INT);
 
         return $stmt->execute();
     }
@@ -135,8 +165,8 @@ class Compra
         $sql = "UPDATE {$this->tabla} SET estado = :estado WHERE id_compra = :id_compra";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':estado', $estado);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
+        $stmt->bindValue(':estado', $estado);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
 
         return $stmt->execute();
     }
@@ -149,7 +179,7 @@ class Compra
         $sql = "DELETE FROM {$this->tabla} WHERE id_compra = :id_compra";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_compra', $id_compra, PDO::PARAM_INT);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
 
         return $stmt->execute();
     }

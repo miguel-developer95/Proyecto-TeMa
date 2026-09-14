@@ -49,7 +49,8 @@ class CompraController
         }
 
         $this->compraModel->fecha_hora = date('Y-m-d H:i:s');
-        $this->compraModel->metodo_pago = $datos['metodo_pago'];
+        $this->compraModel->id_metodo_pago = (int) ($datos['metodo_pago'] ?? 1);
+        $this->compraModel->metodo_pago = $this->compraModel->id_metodo_pago;
         $this->compraModel->estado = 'registrada';
         $this->compraModel->total_compra = $total;
         $this->compraModel->id_proveedor = (int) $datos['id_proveedor'];
@@ -122,7 +123,8 @@ class CompraController
 
         $this->compraModel->id_compra = $id_compra;
         $this->compraModel->fecha_hora = $compraActual['fecha_hora'];
-        $this->compraModel->metodo_pago = $datosNuevos['metodo_pago'] ?? $compraActual['metodo_pago'];
+        $this->compraModel->id_metodo_pago = (int) ($datosNuevos['metodo_pago'] ?? $compraActual['id_metodo_pago'] ?? 1);
+        $this->compraModel->metodo_pago = $this->compraModel->id_metodo_pago;
         $this->compraModel->estado = $datosNuevos['estado'] ?? $compraActual['estado'];
         $this->compraModel->total_compra = $datosNuevos['total_compra'] ?? $compraActual['total_compra'];
         $this->compraModel->id_proveedor = $datosNuevos['id_proveedor'] ?? $compraActual['id_proveedor'];

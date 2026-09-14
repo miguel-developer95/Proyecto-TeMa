@@ -10,6 +10,11 @@ if (!isset($_SESSION['user'])) {
     header("Location: /Proyecto-TeMa/view/login.php");
     exit();
 }
+$rolActual = strtolower($_SESSION['user']['rol'] ?? '');
+if ($rolActual !== 'administrador') {
+    header("Location: /Proyecto-TeMa/view/pos.php");
+    exit();
+}
 
 require_once __DIR__ . '/../model/usuario.php';
 $usuarioModel = new Usuario();
@@ -22,269 +27,126 @@ $editId = $_GET['edit_id'] ?? '';
 $editUsername = $_GET['edit_username'] ?? '';
 $editEmail = $_GET['edit_email'] ?? '';
 $editDocumento = $_GET['edit_documento'] ?? '';
+$titulo = 'Configuración';
+$subtitulo = 'Gestión y administración de cuentas de usuario del sistema';
+require __DIR__ . '/partials/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuración - Tentaciones Marlly</title>
-    <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        /* Estilos Base e idénticos al Dashboard */
-        * html,
-        body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100%;
-            width: 100%;
-        }
+<style>
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px 20px;
+        margin-top: 15px;
+    }
 
-        body {
-            display: flex;
-            background-color: #fce4ec;
-            overflow-x: hidden;
-            font-family: 'Poppins', sans-serif;
-        }
+    .form-group {
+        width: 100%;
+    }
 
-        .sidebar {
-            width: 280px;
-            min-width: 280px;
-            background: linear-gradient(0deg, #3d405b 10%, #ffffff 50%);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px 0;
-            height: 100vh;
-            box-sizing: border-box;
-            box-shadow: 10px 0 30px 10px rgba(0, 0, 0, 0.2);
-        }
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #333;
+    }
 
-        .sidebar-header {
-            text-align: center;
-            padding: 0 15px 20px;
-        }
+    .form-group input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1.5px solid #f3c6d8;
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 14px;
+        outline: none;
+    }
 
-        .sidebar-header img {
-            width: 190px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-        }
+    .form-group input:focus {
+        border-color: #e63c82;
+    }
 
-        .sidebar-header h3 {
-            font-size: 16px;
-            color: #e63c82;
-        }
+    .btn-container {
+        grid-column: span 2;
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
 
-        .menu-list {
-            list-style: none;
-            margin-top: 20px;
-        }
+    .btn-cancel {
+        background-color: #6c757d;
+        color: white;
+        padding: 0 25px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 42px;
+        font-size: 14px;
+    }
 
-        .menu-list li a {
-            display: flex;
-            align-items: center;
-            font-size: 16px;
-            font-weight: 600;
-            color: #adb5bd;
-            text-decoration: none;
-            padding: 12px 20px;
-            margin: 6px 15px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
-                background-color 0.3s ease,
-                box-shadow 0.3s ease;
-            will-change: transform;
-        }
+    .btn-cancel:hover {
+        background-color: #5a6268;
+    }
 
-        .menu-list li a i {
-            margin-right: 12px;
-            font-size: 16px;
-        }
+    .action-btn {
+        padding: 6px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
 
-        .menu-list li a:hover,
-        .menu-list li.active a {
-            background-color: #e63c82;
-            color: #ffffff;
-            border-color: #c22b68;
-            transform: translateY(-6px);
-            box-shadow: 0 6px 16px rgba(230, 60, 130, 0.3);
-        }
+    .btn-activate {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
 
-        .logout-btn {
-            padding: 12px 20px;
-            color: #ff6b6b;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            font-size: 16px;
-            font-weight: 600;
-            margin: 10px 15px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-        }
+    .btn-deactivate {
+        background: #fff3e0;
+        color: #e65100;
+    }
 
-        .logout-btn i {
-            margin-right: 12px;
-            font-size: 18px;
-        }
+    .btn-edit {
+        background: #e3f2fd;
+        color: #1976d2;
+        margin-right: 5px;
+    }
 
-        .logout-btn:hover {
-            background-color: #c41313;
-            color: #ffffff;
-            transform: translateY(-6px);
-            border-color: #ff6b6b;
-        }
+    .btn-delete {
+        background: #ffebee;
+        color: #c62828;
+    }
 
-        /* Contenido Principal */
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        .crud-card {
-            background: #fff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 25px;
-        }
-
-        /* Formulario Organizado en Cuadrícula */
+    @media (max-width: 768px) {
         .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px 20px;
-            margin-top: 15px;
-        }
-
-        .form-group {
-            width: 100%;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #333;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
+            grid-template-columns: 1fr;
         }
 
         .btn-container {
-            grid-column: span 2;
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            grid-column: span 1;
         }
+    }
+</style>
 
-        .btn-primary {
-            background-color: #e63c82;
-            color: white;
-            padding: 0 25px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: 0.3s;
-            height: 42px;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        .btn-primary:hover {
-            background-color: #c22b68;
-            transform: translateY(-2px);
-        }
-
-        .btn-cancel {
-            background-color: #6c757d;
-        }
-
-        .btn-cancel:hover {
-            background-color: #5a6268;
-        }
-
-        /* Tabla de Usuarios */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th,
-        td {
-            padding: 14px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-        }
-
-        th {
-            background-color: #f8f9fa;
-            color: #555;
-        }
-
-        .action-btn {
-            padding: 6px 12px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-edit {
-            background: #e3f2fd;
-            color: #1976d2;
-            margin-right: 5px;
-        }
-
-        .btn-delete {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .btn-container {
-                grid-column: span 1;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-    <?php require_once __DIR__ . '/../helpers/sidebar.php'; ?>
-
-    <!-- Contenido Principal -->
-    <main class="main-content">
-        <h2>Gestión de Usuarios</h2>
         <p style="color: #666; margin-bottom: 20px;">Total de usuarios registrados en el sistema: <strong><?php echo $totalUsuarios; ?></strong></p>
+
+        <?php if (isset($_GET['status']) && $_GET['status'] === 'short_password'): ?>
+            <div style="background:#ffebee; color:#c62828; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+                <i class="fa-solid fa-triangle-exclamation"></i> La contraseña debe tener al menos 8 caracteres.
+            </div>
+        <?php elseif (isset($_GET['status']) && $_GET['status'] === 'updated'): ?>
+            <div style="background:#e8f5e9; color:#2e7d32; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+                <i class="fa-solid fa-circle-check"></i> Usuario actualizado correctamente.
+            </div>
+        <?php endif; ?>
 
         <!-- Formulario (Registrar o Editar) -->
         <div class="crud-card">
@@ -322,7 +184,7 @@ $editDocumento = $_GET['edit_documento'] ?? '';
 
                     <div class="form-group">
                         <label>Contraseña <?php echo $editMode ? '(Dejar vacío para conservar)' : ''; ?></label>
-                        <input type="password" name="password" <?php echo $editMode ? '' : 'required'; ?> placeholder="<?php echo $editMode ? 'Opcional' : 'Contraseña'; ?>">
+                        <input type="password" name="password" minlength="8" <?php echo $editMode ? '' : 'required'; ?> placeholder="<?php echo $editMode ? 'Opcional (mínimo 8 caracteres)' : 'Contraseña (mínimo 8 caracteres)'; ?>">
                     </div>
 
                     <div class="btn-container">
@@ -390,21 +252,4 @@ $editDocumento = $_GET['edit_documento'] ?? '';
                 </tbody>
             </table>
         </div>
-    </main>
-
-    <!-- Script para cerrar sesión al retroceder -->
-    <script>
-        window.addEventListener("pageshow", function(event) {
-            var historyTraversal = event.persisted ||
-                (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
-
-            if (historyTraversal) {
-                // Redirige reemplazando la entrada del historial para evitar bucles
-                window.location.replace("/Proyecto-TeMa/index.php?action=logout");
-            }
-        });
-    </script>
-    <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
-</body>
-
-</html>
+<?php require __DIR__ . '/partials/foot.php'; ?>

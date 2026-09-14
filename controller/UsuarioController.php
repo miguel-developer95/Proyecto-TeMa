@@ -9,6 +9,11 @@ class UsuarioController {
             session_start();
         }
 
+        if (strlen(trim((string)$password)) < 8) {
+            header("Location: /Proyecto-TeMa/view/register.php?error=short_password");
+            exit();
+        }
+
         $usuarioModel = new Usuario();
         $usernameGenerado = $usuarioModel->registrar($nombre, $apellido, $rol, $password, $email, $documento);
 
@@ -118,7 +123,7 @@ class UsuarioController {
             exit();
         }
 
-        if (strlen($password) < 6) {
+        if (strlen($password) < 8) {
             header("Location: /Proyecto-TeMa/view/recuperar_contra.php?token=" . urlencode($token) . "&error=muy_corta");
             exit();
         }
@@ -146,9 +151,13 @@ class UsuarioController {
         exit();
     }
 
-    public function editar($id, $username, $password) {
+    public function editar($id, $username, $email = null, $documento = null, $password = null) {
+        if (!empty($password) && strlen(trim($password)) < 8) {
+            header("Location: /Proyecto-TeMa/view/configuracion.php?edit_id=" . urlencode($id) . "&status=short_password");
+            exit();
+        }
         $usuarioModel = new Usuario();
-        $usuarioModel->actualizar($id, $username, $password);
+        $usuarioModel->actualizar((int)$id, $username, $email, $documento, $password);
         header("Location: /Proyecto-TeMa/view/configuracion.php?status=updated");
         exit();
     }

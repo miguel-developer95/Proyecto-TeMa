@@ -22,7 +22,7 @@ require_once __DIR__ . '/../model/proveedores.php';
 $controller = new CompraController();
 $proveedorModel = new Proveedores();
 $user = $_SESSION['user'];
-$id_usuario = (int) ($_SESSION['user']['id_usuario'] ?? 0);
+$id_usuario = (int) ($_SESSION['user']['id'] ?? $_SESSION['user']['id_usuario'] ?? 0);
 
 $mensaje = null;
 $error = null;
@@ -108,342 +108,144 @@ if (isset($_SESSION['flash'])) {
 $proveedores = $proveedorModel->listarProveedores();
 $historial = $controller->listarHistorial();
 
-// Método de pago es una FK a metodos_pago.id_pago, no texto libre.
-require_once __DIR__ . '/../config/connection.php';
-$conn = (new Connection())->conn;
-$metodosPago = $conn->query("SELECT id_pago, tipo_pago, nombre_empresa FROM metodos_pago")->fetchAll(PDO::FETCH_ASSOC);
+// Métodos de pago activos
+require_once __DIR__ . '/../model/metodos_pago.php';
+$metodosPago = (new MetodosPago())->listarMetodosPagoActivos();
+$titulo = 'Compras';
+$subtitulo = 'Registro de compras, proveedores e historial de abastecimiento';
+require __DIR__ . '/partials/head.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
+<style>
+    .form-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compras - Tentaciones Marlly</title>
-    <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        * html,
-        body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100%;
-            width: 100%;
-        }
+    .form-row input,
+    .form-row select {
+        flex: 1;
+        min-width: 140px;
+        padding: 10px 12px;
+        border: 2px solid #f3c6d8;
+        border-radius: 8px;
+        font-size: 14px;
+    }
 
-        body {
-            display: flex;
-            background-color: #fce4ec;
-            overflow-x: hidden;
-        }
+    .form-row input:focus,
+    .form-row select:focus {
+        outline: none;
+        border-color: #e63c82;
+    }
 
-        .sidebar {
-            width: 280px;
-            min-width: 280px;
-            background: linear-gradient(0deg, #3d405b 10%, #ffffff 50%);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px 0;
-            height: 100vh;
-            box-sizing: border-box;
-            box-shadow: 10px 0 30px 10px rgba(0, 0, 0, 0.2);
-        }
+    #items-container .form-row {
+        align-items: center;
+    }
 
-        .sidebar-header {
-            text-align: center;
-            padding: 0 15px 20px;
-        }
+    table.tabla-compras {
+        width: 100%;
+        border-collapse: collapse;
+    }
 
-        .sidebar-header img {
-            width: 190px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-        }
+    table.tabla-compras th,
+    table.tabla-compras td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid #f3d4e2;
+        font-size: 14px;
+    }
 
-        .sidebar-header h3 {
-            font-size: 16px;
-            color: #e63c82;
-        }
+    table.tabla-compras th {
+        color: #888;
+        font-weight: 600;
+        background: #fdf2f7;
+    }
 
-        .menu-list {
-            list-style: none;
-            margin-top: 20px;
-            padding: 0;
-        }
+    .badge-estado {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
 
-        .menu-list li a {
-            display: flex;
-            align-items: center;
-            font-size: 16px;
-            font-weight: 600;
-            color: #adb5bd;
-            text-decoration: none;
-            padding: 12px 20px;
-            margin: 6px 15px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
-                background-color 0.3s ease,
-                box-shadow 0.3s ease;
-        }
+    .badge-registrada {
+        background: #e5f7e5;
+        color: #2e7d32;
+    }
 
-        .menu-list li a i {
-            margin-right: 12px;
-            font-size: 16px;
-        }
+    .badge-anulada {
+        background: #fdeaea;
+        color: #c41313;
+    }
 
-        .menu-list li a:hover,
-        .menu-list li.active a {
-            background-color: #e63c82;
-            color: #ffffff;
-            border-color: #c22b68;
-            transform: translateY(-6px);
-            box-shadow: 0 6px 16px rgba(230, 60, 130, 0.3);
-        }
+    .alerta {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
 
-        .logout-btn {
-            padding: 12px 20px;
-            color: #ff6b6b;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            font-size: 16px;
-            font-weight: 600;
-            margin: 10px 15px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-        }
+    .alerta-exito {
+        background: #e5f7e5;
+        color: #2e7d32;
+    }
 
-        .logout-btn i {
-            margin-right: 12px;
-            font-size: 18px;
-        }
+    .alerta-error {
+        background: #fdeaea;
+        color: #c41313;
+    }
 
-        .logout-btn:hover {
-            background-color: #c41313;
-            color: #ffffff;
-            transform: translateY(-6px);
-            border-color: #ff6b6b;
-        }
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 999;
+        align-items: center;
+        justify-content: center;
+    }
 
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-        }
+    .modal-overlay.activo {
+        display: flex;
+    }
 
-        .top-navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #fff;
-            padding: 40px 20px;
-            border-radius: 30px;
-            box-shadow: 0 2px 5px rgba(255, 17, 17, 0.05);
-            margin-bottom: 20px;
-        }
+    .modal-box {
+        background: #fff;
+        border-radius: 20px;
+        padding: 25px;
+        width: 420px;
+        max-width: 90%;
+    }
 
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    .modal-box h3 {
+        margin-bottom: 15px;
+        color: #333;
+    }
 
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: #e63c82;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
+    .modal-box label {
+        display: block;
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 4px;
+        margin-top: 10px;
+    }
 
-        .content-box {
-            background: #fff;
-            padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
-        }
+    .modal-box select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #f3c6d8;
+        border-radius: 8px;
+        font-size: 14px;
+    }
 
-        .content-box h3 {
-            font-size: 18px;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-
-        .form-row input,
-        .form-row select {
-            flex: 1;
-            min-width: 140px;
-            padding: 10px 12px;
-            border: 2px solid #f3c6d8;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .form-row input:focus,
-        .form-row select:focus {
-            outline: none;
-            border-color: #e63c82;
-        }
-
-        .btn-pink {
-            background-color: #e63c82;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        .btn-pink:hover {
-            background-color: #c22b68;
-        }
-
-        .btn-secondary {
-            background-color: #fce4ec;
-            color: #e63c82;
-            border: 2px solid #e63c82;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        #items-container .form-row {
-            align-items: center;
-        }
-
-        table.tabla-compras {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        table.tabla-compras th,
-        table.tabla-compras td {
-            text-align: left;
-            padding: 10px 12px;
-            border-bottom: 1px solid #f3d4e2;
-            font-size: 14px;
-        }
-
-        table.tabla-compras th {
-            color: #888;
-            font-weight: 600;
-        }
-
-        .badge-estado {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge-registrada {
-            background: #e5f7e5;
-            color: #2e7d32;
-        }
-
-        .badge-anulada {
-            background: #fdeaea;
-            color: #c41313;
-        }
-
-        .alerta {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .alerta-exito {
-            background: #e5f7e5;
-            color: #2e7d32;
-        }
-
-        .alerta-error {
-            background: #fdeaea;
-            color: #c41313;
-        }
-
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4);
-            z-index: 999;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.activo {
-            display: flex;
-        }
-
-        .modal-box {
-            background: #fff;
-            border-radius: 20px;
-            padding: 25px;
-            width: 420px;
-            max-width: 90%;
-        }
-
-        .modal-box h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .modal-box label {
-            display: block;
-            font-size: 13px;
-            color: #888;
-            margin-bottom: 4px;
-            margin-top: 10px;
-        }
-
-        .modal-box select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #f3c6d8;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-
-<body>
-
-    <?php require_once __DIR__ . '/../helpers/sidebar.php'; ?>
-
-    <main class="main-content">
-        <header class="top-navbar">
-            <h2>Compras</h2>
-            <div class="user-profile">
-                <div class="user-avatar"><?php echo strtoupper(substr($user['username'], 0, 1)); ?></div>
-                <span>¡Hola, <strong><?php echo htmlspecialchars($user['username']); ?></strong>!</span>
-            </div>
-        </header>
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+</style>
 
         <?php if ($mensaje): ?>
             <div class="alerta alerta-exito"><?php echo htmlspecialchars($mensaje); ?></div>
@@ -624,16 +426,5 @@ $metodosPago = $conn->query("SELECT id_pago, tipo_pago, nombre_empresa FROM meto
         function cerrarModalEditar() {
             document.getElementById('modal-editar').classList.remove('activo');
         }
-
-        window.addEventListener("pageshow", function(event) {
-            var historyTraversal = event.persisted ||
-                (typeof window.performance != "undefined" && window.performance.navigation.type === 2);
-            if (historyTraversal) {
-                window.location.replace("/Proyecto-TeMa/index.php?action=logout");
-            }
-        });
     </script>
-    <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
-</body>
-
-</html>
+    <?php require __DIR__ . '/partials/foot.php'; ?>

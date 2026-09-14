@@ -10,16 +10,16 @@
  * Patrón: MVC - Capa Modelo (acceso a datos con PDO)
  */
 
-require_once __DIR__ . '/conexion.php';
+require_once __DIR__ . '/../config/connection.php';
 
 class MetodosPago
 {
+        
     private PDO $pdo;
 
     public function __construct()
     {
-        global $pdo;
-        $this->pdo = $pdo;
+        $this->pdo = (new Connection())->conn;
     }
 
     /**
@@ -74,11 +74,12 @@ class MetodosPago
 
     /**
      * Lista todos los métodos de pago activos, para mostrarlos como opciones
-     * en el módulo de Ventas (RF 5.3).
+     * en el módulo de Ventas (RF 5.3) y Compras.
      */
     public function listarMetodosPagoActivos(): array
     {
-        $sql = "SELECT id_metodo_pago, nombre_metodo, empresa
+        $sql = "SELECT id_metodo_pago, nombre_metodo, empresa, estado,
+                       id_metodo_pago AS id_pago, nombre_metodo AS tipo_pago, empresa AS nombre_empresa
                 FROM METODOS_PAGO
                 WHERE estado = 'activo'
                 ORDER BY nombre_metodo ASC";
@@ -94,7 +95,10 @@ class MetodosPago
      */
     public function obtenerPorId(int $idMetodoPago): ?array
     {
-        $sql = "SELECT * FROM METODOS_PAGO WHERE id_metodo_pago = :idMetodoPago";
+        $sql = "SELECT id_metodo_pago, nombre_metodo, empresa, estado,
+                       id_metodo_pago AS id_pago, nombre_metodo AS tipo_pago, empresa AS nombre_empresa
+                FROM METODOS_PAGO
+                WHERE id_metodo_pago = :idMetodoPago";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':idMetodoPago' => $idMetodoPago]);
 
@@ -116,3 +120,6 @@ class MetodosPago
         return $cambio > 0 ? round($cambio, 2) : 0.0;
     }
 }
+
+// Alias de clase para compatibilidad
+class MetodoPago extends MetodosPago {}
