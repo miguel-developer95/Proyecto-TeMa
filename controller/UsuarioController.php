@@ -18,6 +18,12 @@ class UsuarioController {
         $usernameGenerado = $usuarioModel->registrar($nombre, $apellido, $rol, $password, $email, $documento);
 
         if ($usernameGenerado !== false) {
+            $from = $_POST['from'] ?? '';
+            if ($from === 'configuracion') {
+                header("Location: /Proyecto-TeMa/view/configuracion.php?status=created&username=" . urlencode($usernameGenerado));
+                exit();
+            }
+
             // Guardar temporalmente en sesión para mostrarlo en la pantalla de confirmación
             $_SESSION['registro_exitoso'] = [
                 'username' => $usernameGenerado,
@@ -27,6 +33,11 @@ class UsuarioController {
             header("Location: /Proyecto-TeMa/view/registro_exitoso.php");
             exit();
         } else {
+            $from = $_POST['from'] ?? '';
+            if ($from === 'configuracion') {
+                header("Location: /Proyecto-TeMa/view/configuracion.php?status=user_exists");
+                exit();
+            }
             header("Location: /Proyecto-TeMa/view/register.php?error=user_exists");
             exit();
         }
@@ -59,6 +70,7 @@ class UsuarioController {
             // 2. Login correcto: resetear contador de intentos
             $usuarioModel->resetearIntentos($username);
 
+            session_regenerate_id(true);
             $_SESSION['user'] = $user;
             $_SESSION['last_activity'] = time(); // iniciar el reloj de inactividad
             $this->redirigirPorRol($user['rol']);
@@ -97,8 +109,17 @@ class UsuarioController {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+        $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
         session_destroy();
-        header("Location: /Proyecto-TeMa/view/login.php");
+        $param = isset($_GET['sesion_expirada']) ? '?sesion_expirada=1' : '';
+        header("Location: /Proyecto-TeMa/view/login.php" . $param);
         exit();
     }
 
@@ -109,7 +130,9 @@ class UsuarioController {
         $datos = $usuarioModel->generarTokenRecuperacion($email);
 
         if ($datos) {
-            $link = "http://localhost/Proyecto-TeMa/view/recuperar_contra.php?token=" . $datos['token'];
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $link = "{$protocol}{$host}/Proyecto-TeMa/view/recuperar_contra.php?token=" . $datos['token'];
             enviarCorreoRecuperacion($datos['email'], $datos['nombre'], $link);
         }
 
@@ -151,13 +174,13 @@ class UsuarioController {
         exit();
     }
 
-    public function editar($id, $username, $email = null, $documento = null, $password = null) {
+    public function editar($id, $username, $email = null, $documento = null, $password = null, $rol = null) {
         if (!empty($password) && strlen(trim($password)) < 8) {
             header("Location: /Proyecto-TeMa/view/configuracion.php?edit_id=" . urlencode($id) . "&status=short_password");
             exit();
         }
         $usuarioModel = new Usuario();
-        $usuarioModel->actualizar((int)$id, $username, $email, $documento, $password);
+        $usuarioModel->actualizar((int)$id, $username, $email, $documento, $password, $rol);
         header("Location: /Proyecto-TeMa/view/configuracion.php?status=updated");
         exit();
     }

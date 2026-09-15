@@ -4,10 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isset($_SESSION['user'])) {
-    header("Location: /Proyecto-TeMa/view/login.php");
-    exit();
-}
+require_once __DIR__ . '/../helpers/auth_guard.php';
 
 require_once __DIR__ . '/../config/connection.php';
 require_once __DIR__ . '/../model/venta.php';
@@ -384,5 +381,6 @@ $detalle = $recibo['detalle'] ?? [];
         </div>
     <?php endif; ?>
 
+    <script src="/Proyecto-TeMa/assets/js/session-timeout.js"></script>
 </body>
 </html>

@@ -5,6 +5,7 @@ header("Pragma: no-cache"); // HTTP 1.0
 header("Expires: 0"); // Proxies
 
 if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../helpers/funciones.php';
 
 // OPCIONAL: si el usuario YA tiene sesión activa, no tiene sentido
 // que vuelva a registrarse; lo mandamos directo al dashboard.
@@ -63,6 +64,7 @@ if (isset($_SESSION['user'])) {
             <!-- Formulario configurado hacia el controlador -->
             <form id="registerForm" action="/Proyecto-TeMa/index.php" method="POST">
                 <input type="hidden" name="action" value="register">
+                <?= csrf_field() ?>
 
                 <div class="input-group">
                     <i class="fa-solid fa-user"></i>
@@ -79,8 +81,6 @@ if (isset($_SESSION['user'])) {
                     <select name="rol" required>
                         <option value="">Selecciona un rol</option>
                         <option value="Administrador">Administrador</option>
-                        <option value="Vendedor">Vendedor</option>
-                        <option value="Cajero">Cajero</option>
                     </select>
                 </div>
 
@@ -102,7 +102,7 @@ if (isset($_SESSION['user'])) {
 
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
-                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirmar Contraseña (mínimo 8 caracteres)" required minlength="8">
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirmar Contraseña" required minlength="8">
                     <i class="fa-solid fa-eye toggle-eye" id="toggleConfirmPassword"></i>
                 </div>
 

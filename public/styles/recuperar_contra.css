@@ -21,11 +21,17 @@ h2 {
     text-align: center;
 }
 
-input[type="email"] {
-    width: 94%;
+.input-wrapper {
+    width: 100%;          /* ocupa todo el ancho disponible */
+    max-width: 600px;     /* puedes aumentar este valor según lo que necesites */
+}
+
+.input-wrapper input[type="email"] {
+    width: 100%;          /* el input se adapta al div */
     padding: 10px;
-    margin: 10px 0;
     border-radius: 10px;
+    font-size: 16px;
+    box-sizing: border-box;
 }
 
 button {

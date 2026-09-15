@@ -6,10 +6,27 @@ header("Pragma: no-cache"); // HTTP 1.0
 header("Expires: 0"); // Proxies
 
 if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../helpers/funciones.php';
 
-// SI YA TIENE SESIÓN ACTIVA, REDIRIGIR AL DASHBOARD
-if (isset($_SESSION['user'])) {
-    header("Location: /Proyecto-TeMa/view/dashboard.php");
+// Si la sesión expiró por inactividad, asegurar que se destruya cualquier sesión residual
+if (isset($_GET['sesion_expirada'])) {
+    $_SESSION = [];
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+    session_destroy();
+} elseif (isset($_SESSION['user'])) {
+    // Si ya tiene sesión activa y NO expiró, redirigir a su pantalla correspondiente
+    $rol = strtolower($_SESSION['user']['rol'] ?? '');
+    if (in_array($rol, ['vendedor', 'cajero'], true)) {
+        header("Location: /Proyecto-TeMa/view/pos.php");
+    } else {
+        header("Location: /Proyecto-TeMa/view/dashboard.php");
+    }
     exit();
 }
 ?>
@@ -81,6 +98,7 @@ if (isset($_SESSION['user'])) {
             <!-- Formulario configurado para el controlador MVC -->
             <form action="/Proyecto-TeMa/index.php" method="POST">
                 <input type="hidden" name="action" value="login">
+                <?= csrf_field() ?>
 
                 <div class="input-group">
                     <i class="fa-solid fa-user"></i>

@@ -6,17 +6,11 @@ header("Expires: 0"); // Proxies
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-if (!isset($_SESSION['user'])) {
-    header("Location: /Proyecto-TeMa/view/login.php");
-    exit();
-}
-$rolActual = strtolower($_SESSION['user']['rol'] ?? '');
-if ($rolActual !== 'administrador') {
-    header("Location: /Proyecto-TeMa/view/pos.php");
-    exit();
-}
-
+require_once __DIR__ . '/../helpers/auth_guard.php';
+verificarRol(['administrador']);
+require_once __DIR__ . '/../helpers/funciones.php';
 require_once __DIR__ . '/../model/usuario.php';
+
 $usuarioModel = new Usuario();
 
 $totalUsuarios = $usuarioModel->contarUsuarios();
@@ -27,6 +21,7 @@ $editId = $_GET['edit_id'] ?? '';
 $editUsername = $_GET['edit_username'] ?? '';
 $editEmail = $_GET['edit_email'] ?? '';
 $editDocumento = $_GET['edit_documento'] ?? '';
+$editRol = $_GET['edit_rol'] ?? 'Administrador';
 $titulo = 'Configuración';
 $subtitulo = 'Gestión y administración de cuentas de usuario del sistema';
 require __DIR__ . '/partials/head.php';
@@ -52,7 +47,8 @@ require __DIR__ . '/partials/head.php';
         color: #333;
     }
 
-    .form-group input {
+    .form-group input,
+    .form-group select {
         width: 100%;
         padding: 10px 12px;
         border: 1.5px solid #f3c6d8;
@@ -60,9 +56,15 @@ require __DIR__ . '/partials/head.php';
         box-sizing: border-box;
         font-size: 14px;
         outline: none;
+        background-color: #fff;
     }
 
-    .form-group input:focus {
+    .form-group select {
+        cursor: pointer;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
         border-color: #e63c82;
     }
 
@@ -93,37 +95,43 @@ require __DIR__ . '/partials/head.php';
         background-color: #5a6268;
     }
 
-    .action-btn {
-        padding: 6px 12px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
+    .crud-card .action-btn,
+    .crud-card .action-btn:link,
+    .crud-card .action-btn:visited {
+        all: revert;
+        box-sizing: border-box !important;
+        display: inline-flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        white-space: nowrap !important;
+        position: relative !important;
+        padding: 6px 12px !important;
+        border-radius: 6px !important;
+        text-decoration: none !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        line-height: 1.3 !important;
+        cursor: pointer !important;
     }
 
-    .btn-activate {
-        background: #e8f5e9;
-        color: #2e7d32;
+    .crud-card .action-btn i,
+    .crud-card .action-btn i.fa-solid {
+        all: revert;
+        position: static !important;
+        display: inline-block !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 13px !important;
+        line-height: 1 !important;
     }
 
-    .btn-deactivate {
-        background: #fff3e0;
-        color: #e65100;
-    }
-
-    .btn-edit {
-        background: #e3f2fd;
-        color: #1976d2;
-        margin-right: 5px;
-    }
-
-    .btn-delete {
-        background: #ffebee;
-        color: #c62828;
-    }
+    .crud-card .btn-activate { background: #e8f5e9 !important; color: #2e7d32 !important; }
+    .crud-card .btn-deactivate { background: #fff3e0 !important; color: #e65100 !important; }
+    .crud-card .btn-edit { background: #e3f2fd !important; color: #1976d2 !important; margin-right: 5px !important; }
+    .crud-card .btn-delete { background: #ffebee !important; color: #c62828 !important; }
 
     @media (max-width: 768px) {
         .form-grid {
@@ -142,9 +150,25 @@ require __DIR__ . '/partials/head.php';
             <div style="background:#ffebee; color:#c62828; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
                 <i class="fa-solid fa-triangle-exclamation"></i> La contraseña debe tener al menos 8 caracteres.
             </div>
+        <?php elseif (isset($_GET['status']) && $_GET['status'] === 'created'): ?>
+            <div style="background:#e8f5e9; color:#2e7d32; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+                <i class="fa-solid fa-circle-check"></i> Usuario creado exitosamente. Nombre de usuario asignado automáticamente: <strong><?php echo htmlspecialchars($_GET['username'] ?? ''); ?></strong>
+            </div>
+        <?php elseif (isset($_GET['status']) && $_GET['status'] === 'user_exists'): ?>
+            <div style="background:#ffebee; color:#c62828; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+                <i class="fa-solid fa-triangle-exclamation"></i> El correo electrónico o número de documento ya está registrado. Por favor verifica.
+            </div>
         <?php elseif (isset($_GET['status']) && $_GET['status'] === 'updated'): ?>
             <div style="background:#e8f5e9; color:#2e7d32; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
                 <i class="fa-solid fa-circle-check"></i> Usuario actualizado correctamente.
+            </div>
+        <?php elseif (isset($_GET['status']) && $_GET['status'] === 'deleted'): ?>
+            <div style="background:#e8f5e9; color:#2e7d32; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+                <i class="fa-solid fa-circle-check"></i> Usuario desactivado correctamente del sistema (eliminación lógica).
+            </div>
+        <?php elseif (isset($_GET['status']) && $_GET['status'] === 'estado_actualizado'): ?>
+            <div style="background:#e8f5e9; color:#2e7d32; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+                <i class="fa-solid fa-circle-check"></i> Estado del usuario actualizado correctamente.
             </div>
         <?php endif; ?>
 
@@ -153,23 +177,48 @@ require __DIR__ . '/partials/head.php';
             <h3><?php echo $editMode ? 'Editar Usuario #' . htmlspecialchars($editId) : 'Crear Nuevo Usuario'; ?></h3>
             <form action="/Proyecto-TeMa/index.php" method="POST">
                 <input type="hidden" name="action" value="<?php echo $editMode ? 'update_user' : 'register'; ?>">
+                <input type="hidden" name="from" value="configuracion">
+                <?= csrf_field() ?>
                 <?php if ($editMode): ?>
                     <input type="hidden" name="id" value="<?php echo htmlspecialchars($editId); ?>">
                 <?php endif; ?>
 
                 <div class="form-grid">
+                    <?php if ($editMode): ?>
+                        <div class="form-group">
+                            <label>Nombre de Usuario *</label>
+                            <input type="text" name="username" value="<?php echo htmlspecialchars($editUsername); ?>" required placeholder="Nombre de usuario">
+                        </div>
+                    <?php else: ?>
+                        <div class="form-group">
+                            <label>Nombre *</label>
+                            <input type="text" name="nombre" required placeholder="Primer nombre">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Apellido *</label>
+                            <input type="text" name="apellido" required placeholder="Primer apellido">
+                        </div>
+                    <?php endif; ?>
+
                     <div class="form-group">
-                        <label>Nombre de Usuario</label>
-                        <input type="text" name="username" value="<?php echo htmlspecialchars($editUsername); ?>" required placeholder="Nombre de usuario">
+                        <label>Rol *</label>
+                        <select name="rol" required>
+                            <?php if (!$editMode): ?>
+                                <option value="">Selecciona un rol</option>
+                            <?php endif; ?>
+                            <option value="Administrador" <?php echo ($editRol === 'Administrador') ? 'selected' : ''; ?>>Administrador</option>
+                            <option value="Vendedor" <?php echo ($editRol === 'Vendedor') ? 'selected' : ''; ?>>Vendedor</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
-                        <label>Correo Electrónico</label>
+                        <label>Correo Electrónico *</label>
                         <input type="email" name="email" value="<?php echo htmlspecialchars($editEmail); ?>" required placeholder="correo@ejemplo.com">
                     </div>
 
                     <div class="form-group">
-                        <label>Número de Documento</label>
+                        <label>Número de Documento *</label>
                         <input
                             type="text"
                             name="documento"
@@ -183,7 +232,7 @@ require __DIR__ . '/partials/head.php';
                     </div>
 
                     <div class="form-group">
-                        <label>Contraseña <?php echo $editMode ? '(Dejar vacío para conservar)' : ''; ?></label>
+                        <label>Contraseña <?php echo $editMode ? '(Dejar vacío para conservar)' : '* (mínimo 8 caracteres)'; ?></label>
                         <input type="password" name="password" minlength="8" <?php echo $editMode ? '' : 'required'; ?> placeholder="<?php echo $editMode ? 'Opcional (mínimo 8 caracteres)' : 'Contraseña (mínimo 8 caracteres)'; ?>">
                     </div>
 
@@ -240,10 +289,10 @@ require __DIR__ . '/partials/head.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? $u['No.Documento'] ?? ''); ?>&edit_rol=<?php echo urlencode($u['rol'] ?? ''); ?>&edit_estado=<?php echo urlencode($u['estado'] ?? ''); ?>" class="action-btn btn-edit">
+                                <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? $u['No.Documento'] ?? ''); ?>&edit_rol=<?php echo urlencode($u['rol'] ?? ''); ?>" class="action-btn btn-edit">
                                     <i class="fa-solid fa-pen"></i> Editar
                                 </a>
-                                <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este usuario?');" class="action-btn btn-delete">
+                                <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas desactivar (eliminación lógica) a este usuario?');" class="action-btn btn-delete">
                                     <i class="fa-solid fa-trash"></i> Eliminar
                                 </a>
                             </td>
@@ -252,4 +301,4 @@ require __DIR__ . '/partials/head.php';
                 </tbody>
             </table>
         </div>
-<?php require __DIR__ . '/partials/foot.php'; ?>
+<?php require __DIR__ . '/partials/foot.php'; ?>

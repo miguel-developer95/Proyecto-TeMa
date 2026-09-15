@@ -11,6 +11,8 @@ $productoModel = new Producto();
 $productos = $productoModel->listarTodos();
 $proveedores = (new Proveedores())->listarProveedores('activo');
 $alertaBajoStockTotal = count(array_filter($productos, fn($p) => !empty($p['alerta_stock']) && ($p['estado'] ?? '') === 'activo'));
+$categorias = array_unique(array_filter(array_map(fn($p) => trim($p['categoria'] ?? ''), $productos)));
+sort($categorias);
 
 $msg = $_GET['msg'] ?? '';
 $error = $_GET['error'] ?? '';
@@ -108,29 +110,67 @@ require __DIR__ . '/partials/head.php';
         </form>
     </div>
 
+    <!-- Barra de Filtros, Búsqueda y Paginación (Requisito 3.2) -->
+    <div style="background: #fff; border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #fce4ec; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex: 1; min-width: 300px;">
+            <div style="position: relative; flex: 1; min-width: 220px;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #999;"></i>
+                <input type="text" id="filtroTexto" placeholder="Buscar por código o nombre..." style="width: 100%; padding: 9px 12px 9px 36px; border: 1.5px solid #f3c6d8; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box;">
+            </div>
+            <div>
+                <select id="filtroCategoria" style="padding: 9px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; font-size: 14px; outline: none; background: #fff; cursor: pointer;">
+                    <option value="">Todas las categorías</option>
+                    <?php foreach ($categorias as $cat): ?>
+                        <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <select id="filtroEstado" style="padding: 9px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; font-size: 14px; outline: none; background: #fff; cursor: pointer;">
+                    <option value="">Todos los estados</option>
+                    <option value="activo">Activos</option>
+                    <option value="inactivo">Inactivos</option>
+                </select>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666;">
+            <label>Filas por página:</label>
+            <select id="filasPorPagina" style="padding: 6px 10px; border: 1.5px solid #f3c6d8; border-radius: 6px; font-size: 13px; outline: none; background: #fff; cursor: pointer;">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="1000">Todos</option>
+            </select>
+        </div>
+    </div>
+
     <!-- Tabla de Inventario -->
     <div class="table-responsive-wrapper">
-        <table class="table table-bordered align-middle">
+        <table class="table table-bordered align-middle" id="tablaProductos">
             <thead>
                 <tr>
-                    <th>Código de Barras</th>
-                    <th>Nombre</th>
-                    <th>Categoría</th>
-                    <th>P. Compra</th>
-                    <th>P. Venta</th>
-                    <th>Stock Disponible</th>
-                    <th>Estado</th>
+                    <th style="cursor:pointer;" onclick="ordenarTabla(0)">Código de Barras <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                    <th style="cursor:pointer;" onclick="ordenarTabla(1)">Nombre <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                    <th style="cursor:pointer;" onclick="ordenarTabla(2)">Categoría <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                    <th style="cursor:pointer;" onclick="ordenarTabla(3)">P. Compra <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                    <th style="cursor:pointer;" onclick="ordenarTabla(4)">P. Venta <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                    <th style="cursor:pointer;" onclick="ordenarTabla(5)">Stock Disponible <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                    <th style="cursor:pointer;" onclick="ordenarTabla(6)">Estado <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tbodyProductos">
                 <?php if (empty($productos)): ?>
-                    <tr>
+                    <tr id="filaSinDatos">
                         <td colspan="8" style="text-align: center; color: #888; padding: 25px;">No hay productos registrados en el inventario.</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($productos as $p): ?>
-                        <tr class="<?= ($p['alerta_stock'] && $p['estado'] === 'activo') ? 'table-danger' : '' ?>">
+                        <tr class="fila-producto <?= ($p['alerta_stock'] && $p['estado'] === 'activo') ? 'table-danger' : '' ?>"
+                            data-codigo="<?= htmlspecialchars(strtolower($p['codigo_barras'] ?? '')) ?>"
+                            data-nombre="<?= htmlspecialchars(strtolower($p['nombre'] ?? '')) ?>"
+                            data-categoria="<?= htmlspecialchars(strtolower($p['categoria'] ?? '')) ?>"
+                            data-estado="<?= htmlspecialchars(strtolower($p['estado'] ?? '')) ?>">
                             <td><strong><?= htmlspecialchars($p['codigo_barras'] ?? '—') ?></strong></td>
                             <td><?= htmlspecialchars($p['nombre']) ?></td>
                             <td><?= htmlspecialchars($p['categoria'] ?? '—') ?></td>
@@ -165,6 +205,12 @@ require __DIR__ . '/partials/head.php';
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+
+    <!-- Paginador -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; flex-wrap: wrap; gap: 10px; font-size: 13px; color: #666;">
+        <div id="infoPaginacion">Mostrando productos</div>
+        <div id="controlesPaginacion" style="display: flex; gap: 5px;"></div>
     </div>
 </div>
 
@@ -235,6 +281,121 @@ require __DIR__ . '/partials/head.php';
     function cerrarModalEditar() {
         document.getElementById('modalEditarProducto').style.display = 'none';
     }
+
+    // === Lógica de Búsqueda, Filtrado, Ordenamiento y Paginación (RF 3.2) ===
+    let paginaActual = 1;
+    let ordenColumna = -1;
+    let ordenAsc = true;
+
+    function filtrarYPaginar() {
+        const texto = document.getElementById('filtroTexto') ? document.getElementById('filtroTexto').value.toLowerCase().trim() : '';
+        const categoria = document.getElementById('filtroCategoria') ? document.getElementById('filtroCategoria').value.toLowerCase().trim() : '';
+        const estado = document.getElementById('filtroEstado') ? document.getElementById('filtroEstado').value.toLowerCase().trim() : '';
+        const filasPorPagina = document.getElementById('filasPorPagina') ? parseInt(document.getElementById('filasPorPagina').value, 10) : 10;
+
+        const filas = Array.from(document.querySelectorAll('.fila-producto'));
+        const filasVisibles = filas.filter(fila => {
+            const cod = fila.dataset.codigo || '';
+            const nom = fila.dataset.nombre || '';
+            const cat = fila.dataset.categoria || '';
+            const est = fila.dataset.estado || '';
+
+            const coincideTexto = !texto || cod.includes(texto) || nom.includes(texto);
+            const coincideCat = !categoria || cat === categoria;
+            const coincideEst = !estado || est === estado;
+
+            return coincideTexto && coincideCat && coincideEst;
+        });
+
+        filas.forEach(f => f.style.display = 'none');
+
+        const totalVisibles = filasVisibles.length;
+        const totalPaginas = Math.ceil(totalVisibles / filasPorPagina) || 1;
+
+        if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+        if (paginaActual < 1) paginaActual = 1;
+
+        const inicio = (paginaActual - 1) * filasPorPagina;
+        const fin = Math.min(inicio + filasPorPagina, totalVisibles);
+
+        for (let i = inicio; i < fin; i++) {
+            filasVisibles[i].style.display = '';
+        }
+
+        const info = document.getElementById('infoPaginacion');
+        if (info) {
+            info.textContent = totalVisibles > 0 
+                ? `Mostrando ${inicio + 1} a ${fin} de ${totalVisibles} producto(s)` 
+                : 'No se encontraron productos coincidentes';
+        }
+
+        const contenedorBotones = document.getElementById('controlesPaginacion');
+        if (contenedorBotones) {
+            contenedorBotones.innerHTML = '';
+            if (totalPaginas > 1) {
+                const btnAnt = document.createElement('button');
+                btnAnt.type = 'button';
+                btnAnt.className = 'btn btn-sm btn-secondary';
+                btnAnt.textContent = '« Ant';
+                btnAnt.disabled = paginaActual === 1;
+                btnAnt.onclick = () => { paginaActual--; filtrarYPaginar(); };
+                contenedorBotones.appendChild(btnAnt);
+
+                for (let p = 1; p <= totalPaginas; p++) {
+                    const btnP = document.createElement('button');
+                    btnP.type = 'button';
+                    btnP.className = `btn btn-sm ${p === paginaActual ? 'btn-primary' : 'btn-secondary'}`;
+                    btnP.textContent = p;
+                    btnP.onclick = () => { paginaActual = p; filtrarYPaginar(); };
+                    contenedorBotones.appendChild(btnP);
+                }
+
+                const btnSig = document.createElement('button');
+                btnSig.type = 'button';
+                btnSig.className = 'btn btn-sm btn-secondary';
+                btnSig.textContent = 'Sig »';
+                btnSig.disabled = paginaActual === totalPaginas;
+                btnSig.onclick = () => { paginaActual++; filtrarYPaginar(); };
+                contenedorBotones.appendChild(btnSig);
+            }
+        }
+    }
+
+    function ordenarTabla(colIdx) {
+        const tbody = document.getElementById('tbodyProductos');
+        if (!tbody) return;
+        const filas = Array.from(tbody.querySelectorAll('.fila-producto'));
+        
+        if (ordenColumna === colIdx) {
+            ordenAsc = !ordenAsc;
+        } else {
+            ordenColumna = colIdx;
+            ordenAsc = true;
+        }
+
+        filas.sort((a, b) => {
+            let valA = a.cells[colIdx].innerText.trim().replace('$', '').replace(',', '');
+            let valB = b.cells[colIdx].innerText.trim().replace('$', '').replace(',', '');
+
+            let numA = parseFloat(valA);
+            let numB = parseFloat(valB);
+
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return ordenAsc ? numA - numB : numB - numA;
+            }
+            return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+
+        filas.forEach(f => tbody.appendChild(f));
+        filtrarYPaginar();
+    }
+
+    document.getElementById('filtroTexto')?.addEventListener('input', () => { paginaActual = 1; filtrarYPaginar(); });
+    document.getElementById('filtroCategoria')?.addEventListener('change', () => { paginaActual = 1; filtrarYPaginar(); });
+    document.getElementById('filtroEstado')?.addEventListener('change', () => { paginaActual = 1; filtrarYPaginar(); });
+    document.getElementById('filasPorPagina')?.addEventListener('change', () => { paginaActual = 1; filtrarYPaginar(); });
+
+    filtrarYPaginar();
 </script>
 
 <?php require __DIR__ . '/partials/foot.php'; ?>

@@ -56,6 +56,7 @@ elseif ($action === 'update_user' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $email = $_POST['email'] ?? null;
     $documento = $_POST['documento'] ?? null;
+    $rol = $_POST['rol'] ?? null;
     $password = !empty($_POST['password']) ? $_POST['password'] : null;
 
     if ($password !== null && strlen(trim($password)) < 8) {
@@ -64,7 +65,7 @@ elseif ($action === 'update_user' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($id) {
-        $controller->editar($id, $username, $email, $documento, $password);
+        $controller->editar($id, $username, $email, $documento, $password, $rol);
     }
 } 
 elseif ($action === 'delete_user') {
@@ -155,6 +156,20 @@ elseif ($action === 'modificar_producto') {
 elseif ($action === 'registrar_producto') {
     require_once __DIR__ . '/controller/producto.php';
     (new ProductoController())->registrar();
+}
+elseif ($action === 'exportar_informe') {
+    require_once __DIR__ . '/controller/InformeController.php';
+    $informeCtrl = new InformeController();
+    $tipo = $_GET['tipo'] ?? 'ganancia_producto';
+    $formato = $_GET['formato'] ?? 'csv';
+    $inicio = $_GET['fecha_inicio'] ?? date('Y-m-01');
+    $fin = $_GET['fecha_fin'] ?? date('Y-m-d');
+
+    if ($formato === 'pdf') {
+        $informeCtrl->exportarPDF($tipo, $inicio, $fin);
+    } else {
+        $informeCtrl->exportarCSV($tipo, $inicio, $fin);
+    }
 }
 else {
     // Si el usuario ya inició sesión, redirigir al dashboard en lugar del login

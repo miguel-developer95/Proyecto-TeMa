@@ -3,8 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Config de inactividad ---
-define('TIEMPO_INACTIVIDAD_MAX', 1800); // 30 minutos en segundos
+// Configuración centralizada de inactividad
+require_once __DIR__ . '/../config/session_config.php';
 
 // 1. Verificar autenticación (tu lógica actual)
 if (!isset($_SESSION['user'])) {
@@ -17,7 +17,14 @@ if (isset($_SESSION['last_activity'])) {
     $tiempoInactivo = time() - $_SESSION['last_activity'];
 
     if ($tiempoInactivo > TIEMPO_INACTIVIDAD_MAX) {
-        session_unset();
+        $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
         session_destroy();
         header('Location: /Proyecto-TeMa/view/login.php?sesion_expirada=1');
         exit;

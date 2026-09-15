@@ -261,34 +261,42 @@ class Usuario
     /**
      * Update user details.
      */
-    public function actualizar(int $id, string $username, ?string $email = null, ?string $documento = null, ?string $password = null): bool
+    public function actualizar(int $id, string $username, ?string $email = null, ?string $documento = null, ?string $password = null, ?string $rol = null): bool
     {
         try {
+            $sql = "UPDATE usuarios SET username = :username, email = :email, documento = :documento";
+            $params = [
+                ':username' => $username,
+                ':email' => $email,
+                ':documento' => $documento,
+                ':id' => $id,
+            ];
+
+            if (!empty($rol)) {
+                $sql .= ", rol = :rol";
+                $params[':rol'] = $rol;
+            }
+
             if (!empty($password)) {
                 $hash = password_hash($password, PASSWORD_BCRYPT);
-                $query = "UPDATE usuarios SET username = :username, email = :email, documento = :documento, password = :password WHERE id = :id";
-                $stmt = $this->db->prepare($query);
-                $stmt->bindParam(":password", $hash);
-            } else {
-                $query = "UPDATE usuarios SET username = :username, email = :email, documento = :documento WHERE id = :id";
-                $stmt = $this->db->prepare($query);
+                $sql .= ", password = :password";
+                $params[':password'] = $hash;
             }
-            $stmt->bindParam(":username", $username);
-            $stmt->bindParam(":email", $email);
-            $stmt->bindParam(":documento", $documento);
-            $stmt->bindParam(":id", $id);
-            return $stmt->execute();
+
+            $sql .= " WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute($params);
         } catch (PDOException $e) {
             return false;
         }
     }
 
     /**
-     * Delete a user by ID.
+     * Delete a user by ID using Soft Delete (marcar como inactivo).
      */
     public function eliminar(int $id): bool
     {
-        $query = "DELETE FROM usuarios WHERE id = :id";
+        $query = "UPDATE usuarios SET estado = 'inactivo' WHERE id = :id";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":id", $id);
         return $stmt->execute();
@@ -345,7 +353,7 @@ class Usuario
         // Solo el hash se guarda en la BD
         $tokenHash = hash('sha256', $tokenPlano);
 
-        $expira = date('Y-m-d H:i:s', time() + 1800); // 30 minutos
+        $expira = date('Y-m-d H:i:s', time() + 300); // 5 minutos
 
         $update = "UPDATE usuarios SET reset_token = :hash, reset_token_expira = :expira WHERE id = :id";
         $stmtUpdate = $this->db->prepare($update);
@@ -353,6 +361,16 @@ class Usuario
         $stmtUpdate->bindParam(':expira', $expira);
         $stmtUpdate->bindParam(':id', $user['id']);
         $stmtUpdate->execute();
+
+        try {
+            $stmtReset = $this->db->prepare("INSERT INTO password_resets (id_usuario, token_hash, expira_en) VALUES (:id_usuario, :token_hash, :expira_en)");
+            $stmtReset->bindParam(':id_usuario', $user['id']);
+            $stmtReset->bindParam(':token_hash', $tokenHash);
+            $stmtReset->bindParam(':expira_en', $expira);
+            $stmtReset->execute();
+        } catch (Exception $e) {
+            // No interrumpir si hay error en la tabla secundaria
+        }
 
         return [
             'token'  => $tokenPlano,
@@ -391,15 +409,26 @@ class Usuario
 
     /**
      * Actualiza la contraseña del usuario y limpia el token (uso único).
+     * También desbloquea al usuario e inicializa los intentos fallidos.
      */
     public function restablecerPassword(int $id, string $nuevaPassword): bool
     {
         $hash = password_hash($nuevaPassword, PASSWORD_BCRYPT);
 
-        $query = "UPDATE usuarios SET password = :password, reset_token = NULL, reset_token_expira = NULL WHERE id = :id";
+        $query = "UPDATE usuarios SET password = :password, reset_token = NULL, reset_token_expira = NULL, intentos_fallidos = 0, bloqueado_hasta = NULL WHERE id = :id";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':password', $hash);
         $stmt->bindParam(':id', $id);
-        return $stmt->execute();
+        $result = $stmt->execute();
+
+        try {
+            $stmtReset = $this->db->prepare("UPDATE password_resets SET usado_en = NOW() WHERE id_usuario = :id AND usado_en IS NULL");
+            $stmtReset->bindParam(':id', $id);
+            $stmtReset->execute();
+        } catch (Exception $e) {
+            // Ignorar para no bloquear
+        }
+
+        return $result;
     }
 }

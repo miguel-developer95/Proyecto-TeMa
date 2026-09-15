@@ -1,63 +1,87 @@
 (function () {
     const URL_VERIFICAR = '/Proyecto-TeMa/ajax/verificar_sesion.php';
-    const URL_RENOVAR    = '/Proyecto-TeMa/ajax/renovar_actividad.php';
-    const URL_LOGIN       = '/Proyecto-TeMa/view/login.php?sesion_expirada=1';
+    const URL_RENOVAR   = '/Proyecto-TeMa/ajax/renovar_actividad.php';
+    const URL_LOGOUT    = '/Proyecto-TeMa/index.php?action=logout&sesion_expirada=1';
 
-    const INTERVALO_VERIFICACION_MS = 15000; // consulta al servidor cada 15s
-    const UMBRAL_AVISO_SEG          = 60;   // avisar cuando falte 1 min
-    const THROTTLE_HEARTBEAT_MS     = 20000; // no renovar más de 1 vez/20s
-
-    let ultimoHeartbeat = 0;
+    let tiempoMaximoSegundos = 1800; // 30 minutos
+    let umbralAvisoSegundos = 120;    // Avisar cuando falte 20 segundos
+    let throttleHeartbeatMs = 15000; // Throttle de heartbeat a 5s
+    let ultimoHeartbeat = Date.now();
+    let ultimaActividadUsuario = Date.now();
     let modalVisible = false;
     let countdownInterval = null;
+    let checkInterval = null;
+    let isTerminating = false; 
 
     function crearModal() {
-        const modal = document.createElement('div');
+        let modal = document.getElementById('modal-sesion-expira');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
         modal.id = 'modal-sesion-expira';
         modal.style.cssText = `
-            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-            display: none; align-items: center; justify-content: center; z-index: 9999;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+            display: none; align-items: center; justify-content: center; z-index: 999999;
+            backdrop-filter: blur(2px);
         `;
         modal.innerHTML = `
-            <div style="background:#fff; padding:24px; border-radius:8px; max-width:380px; text-align:center; font-family:sans-serif; box-shadow:0 4px 20px rgba(0,0,0,.3);">
-                <h3 style="margin-top:0;">Tu sesión está por expirar</h3>
-                <p>Por inactividad, tu sesión se cerrará en
-                    <strong><span id="contador-sesion">--</span></strong> segundos.
+            <div style="background:#ffffff; padding:28px 24px; border-radius:18px; max-width:400px; width:90%; text-align:center; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-shadow:0 12px 35px rgba(0,0,0,.25); border:1.5px solid #fce4ec;">
+                <div style="width:54px; height:54px; border-radius:50%; background:#fff0f6; color:#e63c82; display:inline-flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:14px; box-shadow:0 3px 10px rgba(230,60,130,0.15);">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <h3 style="margin:0 0 8px; color:#2b3a55; font-size:18px; font-weight:700;">Tu sesión está por expirar</h3>
+                <p style="color:#666666; font-size:14px; margin:0 0 16px; line-height:1.5;">
+                    Por inactividad, el sistema cerrará tu sesión automáticamente en:
                 </p>
-                <button id="btn-continuar-sesion" style="padding:8px 16px; background:#2e7d32; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-                    Continuar sesión
+                <div style="margin-bottom:20px;">
+                    <span id="contador-sesion" style="font-size:32px; font-weight:800; color:#e63c82; font-variant-numeric:tabular-nums;">--</span>
+                    <span style="font-size:14px; font-weight:600; color:#888888;"> segundos</span>
+                </div>
+                <button id="btn-continuar-sesion" style="padding:10px 24px; background:#e63c82; color:#ffffff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(230,60,130,0.3); transition:all 0.2s ease;">
+                    <i class="fa-solid fa-rotate-right" style="margin-right:6px;"></i> Continuar Sesión
                 </button>
             </div>
         `;
         document.body.appendChild(modal);
-        document.getElementById('btn-continuar-sesion').addEventListener('click', () => {
+
+        document.getElementById('btn-continuar-sesion').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             renovarActividad(true);
             ocultarModal();
         });
+
         return modal;
     }
 
+    function cerrarSesion() {
+        if (isTerminating) return;
+        isTerminating = true;
+        if (countdownInterval) clearInterval(countdownInterval);
+        if (checkInterval) clearInterval(checkInterval);
+        window.location.href = URL_LOGOUT;
+    }
+
     function mostrarModal(segundosRestantes) {
-        const modal = document.getElementById('modal-sesion-expira') || crearModal();
+        if (isTerminating) return;
+        const modal = crearModal();
         modal.style.display = 'flex';
 
-        // Si ya estaba visible, NO reiniciamos el interval — solo permitimos
-        // que verificarSesion() resincronice el valor si hay mucha diferencia.
         if (modalVisible) {
             return;
         }
 
         modalVisible = true;
-        let restante = segundosRestantes;
+        let restante = Math.max(1, Math.round(segundosRestantes));
         actualizarContador(restante);
 
-        clearInterval(countdownInterval);
+        if (countdownInterval) clearInterval(countdownInterval);
         countdownInterval = setInterval(() => {
             restante--;
             actualizarContador(restante);
             if (restante <= 0) {
                 clearInterval(countdownInterval);
-                window.location.href = URL_LOGIN;
+                cerrarSesion();
             }
         }, 1000);
     }
@@ -69,66 +93,88 @@
 
     function ocultarModal() {
         modalVisible = false;
-        clearInterval(countdownInterval);
+        if (countdownInterval) clearInterval(countdownInterval);
         const modal = document.getElementById('modal-sesion-expira');
         if (modal) modal.style.display = 'none';
     }
 
     function renovarActividad(forzado = false) {
+        if (isTerminating) return;
         const ahora = Date.now();
-        if (!forzado && (ahora - ultimoHeartbeat) < THROTTLE_HEARTBEAT_MS) return;
+        if (!forzado && (ahora - ultimoHeartbeat) < throttleHeartbeatMs) return;
         ultimoHeartbeat = ahora;
 
-        fetch(URL_RENOVAR, { method: 'POST', credentials: 'same-origin' })
-            .catch(err => console.error('Error renovando actividad:', err));
+        fetch(URL_RENOVAR, {
+            method: 'POST',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res && res.ok) {
+                if (modalVisible && forzado) {
+                    ocultarModal();
+                }
+            } else if (res && res.expirada) {
+                cerrarSesion();
+            }
+        })
+        .catch(err => console.error('Error al renovar actividad:', err));
     }
 
     function verificarSesion() {
-        fetch(URL_VERIFICAR, { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.activa) {
-                    window.location.href = URL_LOGIN;
+        if (isTerminating) return;
+
+        fetch(URL_VERIFICAR, {
+            credentials: 'same-origin',
+            cache: 'no-store'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.activa) {
+                cerrarSesion();
+                return;
+            }
+
+            if (data.tiempoMaximo) {
+                tiempoMaximoSegundos = Number(data.tiempoMaximo);
+                throttleHeartbeatMs = Math.max(2000, Math.min(15000, Math.floor(tiempoMaximoSegundos * 1000 / 4)));
+            }
+            if (data.umbralAviso) {
+                umbralAvisoSegundos = Number(data.umbralAviso);
+            }
+
+            const restantes = Number(data.segundosRestantes);
+
+            // Solo mostrar modal si el tiempo restante es positivo y está dentro del umbral de aviso
+            if (restantes > 0 && restantes <= umbralAvisoSegundos) {
+                // Si el usuario interactuó localmente en los últimos 5 segundos, renovar de inmediato
+                const segundosInactivoLocal = Math.floor((Date.now() - ultimaActividadUsuario) / 1000);
+                if (segundosInactivoLocal < 5) {
+                    renovarActividad(true);
+                    if (modalVisible) ocultarModal();
                     return;
                 }
-
-                if (data.segundosRestantes <= UMBRAL_AVISO_SEG) {
-                    if (!modalVisible) {
-                        // Primera vez que entramos en zona de aviso: mostrar modal
-                        mostrarModal(data.segundosRestantes);
-                    } else {
-                        // Ya visible: resincronizar SOLO si el desfase es grande
-                        // (ej. la pestaña estuvo en segundo plano y el timer se atrasó)
-                        const spanActual = parseInt(
-                            document.getElementById('contador-sesion').textContent, 10
-                        );
-                        if (Math.abs(spanActual - data.segundosRestantes) > 5) {
-                            actualizarContador(data.segundosRestantes);
-                            // reiniciamos el interval con el valor correcto del servidor
-                            clearInterval(countdownInterval);
-                            let restante = data.segundosRestantes;
-                            countdownInterval = setInterval(() => {
-                                restante--;
-                                actualizarContador(restante);
-                                if (restante <= 0) {
-                                    clearInterval(countdownInterval);
-                                    window.location.href = URL_LOGIN;
-                                }
-                            }, 1000);
-                        }
-                    }
-                } else if (modalVisible) {
-                    ocultarModal();
-                }
-            })
-            .catch(err => console.error('Error verificando sesión:', err));
+                mostrarModal(restantes);
+            } else if (modalVisible && restantes > umbralAvisoSegundos) {
+                ocultarModal();
+            }
+        })
+        .catch(err => console.error('Error al verificar sesión:', err));
     }
 
-    // Actividad real del usuario: clics, mouse, teclado, scroll
-    ['click', 'mousemove', 'keydown', 'scroll'].forEach(evento => {
-        document.addEventListener(evento, () => renovarActividad(false), { passive: true });
+    // Escuchar actividad real del usuario
+    ['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(evento => {
+        document.addEventListener(evento, () => {
+            ultimaActividadUsuario = Date.now();
+            if (!modalVisible) {
+                renovarActividad(false);
+            }
+        }, { passive: true });
     });
 
-    setInterval(verificarSesion, INTERVALO_VERIFICACION_MS);
-    verificarSesion(); // primera verificación al cargar
+    const INTERVALO_VERIFICACION_MS = 4000;
+    checkInterval = setInterval(verificarSesion, INTERVALO_VERIFICACION_MS);
+    verificarSesion();
 })();
