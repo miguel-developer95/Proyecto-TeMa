@@ -1,13 +1,10 @@
 <?php
-declare(strict_types=1);
+// model/venta.php
+require_once __DIR__ . '/../config/connection.php';
 
-require_once __DIR__ . '/../config/Connection.php';
-
-/**
- * Modelo de ventas. Tablas: ventas, detalle_ventas. (RF 5.1 – 5.6)
- */
 class Venta
 {
+    /** @var PDO */
     private PDO $db;
 
     public function __construct()
@@ -16,9 +13,190 @@ class Venta
     }
 
     /**
-     * Registra una venta con sus detalles y descuenta stock (transacción).
-     * $items: [['id_producto'=>int,'cantidad'=>int,'precio_unitario'=>float], ...]
-     * Retorna el id_venta o 0 si falla (p. ej. stock insuficiente).
+     * Registra una nueva venta y descuenta el stock de los productos.
+     *
+     * @param array $productos Lista de productos: id_producto, cantidad, precio_unitario
+     */
+    public function registrar(
+        int $idUsuario,
+        array $productos,
+        float $total,
+        float $valorRecibido,
+        ?int $idMetodoPago = null,
+        ?string $empresa = null,
+        ?int $idCliente = null,
+        string $pagado = 'si'
+    ) {
+        try {
+            $this->db->beginTransaction();
+
+            $cambio = max(0, round($valorRecibido - $total, 2));
+            $numeroRecibo = 'REC-' . date('YmdHis') . '-' . mt_rand(100, 999);
+            $pagadoVal = strtolower(trim($pagado)) === 'no' ? 'no' : 'si';
+
+            $queryVenta = "INSERT INTO ventas
+                (fecha, id_usuario, id_cliente, id_metodo_pago, empresa, total, valor_recibido, cambio, pagado, estado, numero_recibo)
+                VALUES (NOW(), :id_usuario, :id_cliente, :id_metodo_pago, :empresa, :total, :valor_recibido, :cambio, :pagado, 'completada', :numero_recibo)";
+            $stmtVenta = $this->db->prepare($queryVenta);
+            $stmtVenta->bindParam(':id_usuario', $idUsuario, PDO::PARAM_INT);
+            $stmtVenta->bindParam(':id_cliente', $idCliente, PDO::PARAM_INT);
+            $stmtVenta->bindParam(':id_metodo_pago', $idMetodoPago, PDO::PARAM_INT);
+            $stmtVenta->bindParam(':empresa', $empresa);
+            $stmtVenta->bindParam(':total', $total);
+            $stmtVenta->bindParam(':valor_recibido', $valorRecibido);
+            $stmtVenta->bindParam(':cambio', $cambio);
+            $stmtVenta->bindParam(':pagado', $pagadoVal);
+            $stmtVenta->bindParam(':numero_recibo', $numeroRecibo);
+            $stmtVenta->execute();
+            $idVenta = (int) $this->db->lastInsertId();
+
+            foreach ($productos as $producto) {
+                $queryDetalle = "INSERT INTO detalle_ventas (id_venta, id_producto, cantidad, precio_unitario)
+                                 VALUES (:id_venta, :id_producto, :cantidad, :precio_unitario)";
+                $stmtDetalle = $this->db->prepare($queryDetalle);
+                $stmtDetalle->bindParam(':id_venta', $idVenta, PDO::PARAM_INT);
+                $stmtDetalle->bindParam(':id_producto', $producto['id_producto'], PDO::PARAM_INT);
+                $stmtDetalle->bindParam(':cantidad', $producto['cantidad']);
+                $stmtDetalle->bindParam(':precio_unitario', $producto['precio_unitario']);
+                $stmtDetalle->execute();
+
+                $queryStock = "UPDATE productos SET cantidad_stock = cantidad_stock - :cantidad WHERE id_producto = :id_producto";
+                $stmtStock = $this->db->prepare($queryStock);
+                $stmtStock->bindParam(':cantidad', $producto['cantidad']);
+                $stmtStock->bindParam(':id_producto', $producto['id_producto'], PDO::PARAM_INT);
+                $stmtStock->execute();
+
+                // RF 5.2: Registrar movimiento de salida vinculado a la venta para trazabilidad
+                $queryHist = "INSERT INTO historial (fecha_accion, tipo_accion, detalle_cambio, id_usuario)
+                              VALUES (NOW(), 'Salida por Venta', :detalle, :id_usuario)";
+                $stmtHist = $this->db->prepare($queryHist);
+                $detalleHist = "Venta #{$idVenta} ({$numeroRecibo}): Salida de {$producto['cantidad']} unid. de producto ID #{$producto['id_producto']}";
+                $stmtHist->bindParam(':detalle', $detalleHist);
+                $stmtHist->bindParam(':id_usuario', $idUsuario, PDO::PARAM_INT);
+                $stmtHist->execute();
+            }
+
+            $this->db->commit();
+            return $idVenta;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Lista las ventas más recientes.
+     */
+    public function obtenerTodas(int $limite = 20): array
+    {
+        $query = "SELECT v.id_venta, v.fecha, v.empresa, v.total, v.valor_recibido, v.cambio,
+                         v.pagado, v.estado, v.numero_recibo, c.nombre AS cliente,
+                         mp.nombre_metodo, mp.empresa AS metodo_empresa
+                  FROM ventas v
+                  LEFT JOIN clientes c ON v.id_cliente = c.id_cliente
+                  LEFT JOIN metodos_pago mp ON v.id_metodo_pago = mp.id_metodo_pago
+                  ORDER BY v.id_venta DESC
+                  LIMIT :limite";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Obtiene una venta por su ID.
+     */
+    public function obtenerPorId(int $id)
+    {
+        $query = "SELECT * FROM ventas WHERE id_venta = :id_venta";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':id_venta', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Anula una venta y reintegra el stock.
+     */
+    public function cancelar(int $id, string $motivo): bool
+    {
+        try {
+            $this->db->beginTransaction();
+
+            $query = "UPDATE ventas SET estado = 'anulada', motivo_anulacion = :motivo WHERE id_venta = :id_venta";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':motivo', $motivo);
+            $stmt->bindParam(':id_venta', $id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $queryDetalle = "SELECT id_producto, cantidad FROM detalle_ventas WHERE id_venta = :id_venta";
+            $stmtDetalle = $this->db->prepare($queryDetalle);
+            $stmtDetalle->bindParam(':id_venta', $id, PDO::PARAM_INT);
+            $stmtDetalle->execute();
+            $productos = $stmtDetalle->fetchAll(PDO::FETCH_ASSOC);
+
+            $idUsuarioSesion = (int) ($_SESSION['user']['id'] ?? $_SESSION['user']['id_usuario'] ?? 1);
+            foreach ($productos as $producto) {
+                $queryStock = "UPDATE productos SET cantidad_stock = cantidad_stock + :cantidad WHERE id_producto = :id_producto";
+                $stmtStock = $this->db->prepare($queryStock);
+                $stmtStock->bindParam(':cantidad', $producto['cantidad']);
+                $stmtStock->bindParam(':id_producto', $producto['id_producto'], PDO::PARAM_INT);
+                $stmtStock->execute();
+
+                // RF 5.5: Registrar movimiento de reintegro vinculado a la anulación de venta
+                $queryHist = "INSERT INTO historial (fecha_accion, tipo_accion, detalle_cambio, id_usuario)
+                              VALUES (NOW(), 'Reintegro por Anulación', :detalle, :id_usuario)";
+                $stmtHist = $this->db->prepare($queryHist);
+                $detalleHist = "Venta #{$id} anulada. Motivo: {$motivo}. Reintegro de {$producto['cantidad']} unid. de producto ID #{$producto['id_producto']}";
+                $stmtHist->bindParam(':detalle', $detalleHist);
+                $stmtHist->bindParam(':id_usuario', $idUsuarioSesion, PDO::PARAM_INT);
+                $stmtHist->execute();
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            return false;
+        }
+    }
+
+    /**
+     * Genera los datos del recibo electrónico.
+     */
+    public function generarRecibo(int $idVenta): array
+    {
+        $query = "SELECT v.id_venta, v.fecha, v.empresa, v.total, v.valor_recibido, v.cambio,
+                         v.pagado, v.numero_recibo, v.estado, c.nombre AS cliente, c.correo_electronico,
+                         c.telefono AS cliente_telefono, c.documento AS cliente_documento,
+                         m.nombre_metodo, u.nombre AS cajero_nombre, u.username AS cajero_usuario
+                  FROM ventas v
+                  LEFT JOIN clientes c ON v.id_cliente = c.id_cliente
+                  LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
+                  LEFT JOIN usuarios u ON v.id_usuario = u.id
+                  WHERE v.id_venta = :id_venta";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':id_venta', $idVenta, PDO::PARAM_INT);
+        $stmt->execute();
+        $venta = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $queryDetalle = "SELECT p.nombre, dv.cantidad, dv.precio_unitario
+                         FROM detalle_ventas dv
+                         INNER JOIN productos p ON dv.id_producto = p.id_producto
+                         WHERE dv.id_venta = :id_venta";
+        $stmtDetalle = $this->db->prepare($queryDetalle);
+        $stmtDetalle->bindParam(':id_venta', $idVenta, PDO::PARAM_INT);
+        $stmtDetalle->execute();
+        $detalle = $stmtDetalle->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'venta' => $venta,
+            'detalle' => $detalle,
+        ];
+    }
+
+    /**
+     * Alias de registro compatible con VentaController.
      */
     public function crear(
         array $items,
@@ -26,218 +204,21 @@ class Venta
         float $valorRecibido,
         int $idUsuario,
         ?int $idCliente = null,
-        ?string $empresa = null
+        ?string $empresa = null,
+        string $pagado = 'si'
     ): int {
-        if (empty($items)) {
-            return 0;
+        $total = 0.0;
+        foreach ($items as $item) {
+            $total += ((int) $item['cantidad']) * ((float) $item['precio_unitario']);
         }
-        try {
-            $this->db->beginTransaction();
-
-            $total = 0.0;
-            $stocksAntes = [];
-            foreach ($items as $it) {
-                $cant = (int) $it['cantidad'];
-                $precio = (float) $it['precio_unitario'];
-                if ($cant <= 0 || $precio < 0) {
-                    throw new RuntimeException('Cantidades o precios inválidos.');
-                }
-                $stmt = $this->db->prepare(
-                    "SELECT cantidad_stock FROM productos WHERE id_producto = :id FOR UPDATE"
-                );
-                $stmt->execute([':id' => (int) $it['id_producto']]);
-                $row = $stmt->fetch();
-                if (!$row || (int) $row['cantidad_stock'] < $cant) {
-                    throw new RuntimeException('Stock insuficiente.');
-                }
-                $stocksAntes[(int) $it['id_producto']] = (int) $row['cantidad_stock'];
-                $total += $cant * $precio;
-            }
-
-            if ($valorRecibido < $total) {
-                throw new RuntimeException('El valor recibido es menor que el total.');
-            }
-            $cambio = round($valorRecibido - $total, 2);
-
-            $stmt = $this->db->prepare(
-                "INSERT INTO ventas (id_usuario, id_cliente, id_metodo_pago, empresa, total, valor_recibido, cambio, estado)
-                 VALUES (:u, :c, :mp, :emp, :total, :recibido, :cambio, 'completada')"
-            );
-            $stmt->execute([
-                ':u' => $idUsuario,
-                ':c' => $idCliente,
-                ':mp' => $idMetodoPago,
-                ':emp' => $empresa ?: null,
-                ':total' => $total,
-                ':recibido' => $valorRecibido,
-                ':cambio' => $cambio,
-            ]);
-            $idVenta = (int) $this->db->lastInsertId();
-
-            $stmtDet = $this->db->prepare(
-                "INSERT INTO detalle_ventas (id_venta, id_producto, cantidad, precio_unitario)
-                 VALUES (:v, :p, :cant, :precio)"
-            );
-            $stmtStock = $this->db->prepare(
-                "UPDATE productos SET cantidad_stock = cantidad_stock - :cant WHERE id_producto = :p"
-            );
-            // RF 5.2: kardex de salidas vinculadas a la venta
-            $stmtMov = $this->db->prepare(
-                "INSERT INTO movimientos_inventario
-                 (id_producto, tipo, cantidad, stock_antes, stock_despues, id_venta, id_usuario)
-                 VALUES (:p, 'salida', :cant, :antes, :despues, :v, :u)"
-            );
-            foreach ($items as $it) {
-                $idProd = (int) $it['id_producto'];
-                $cant = (int) $it['cantidad'];
-                $stmtDet->execute([
-                    ':v' => $idVenta,
-                    ':p' => $idProd,
-                    ':cant' => $cant,
-                    ':precio' => (float) $it['precio_unitario'],
-                ]);
-                $stmtStock->execute([':cant' => $cant, ':p' => $idProd]);
-                $antes = $stocksAntes[$idProd] ?? 0;
-                $stmtMov->execute([
-                    ':p' => $idProd, ':cant' => $cant,
-                    ':antes' => $antes, ':despues' => $antes - $cant,
-                    ':v' => $idVenta, ':u' => $idUsuario,
-                ]);
-            }
-
-            // RF 5.6: número de recibo correlativo
-            $recibo = 'REC-' . str_pad((string) $idVenta, 6, '0', STR_PAD_LEFT);
-            $stmt = $this->db->prepare("UPDATE ventas SET numero_recibo = :r WHERE id_venta = :v");
-            $stmt->execute([':r' => $recibo, ':v' => $idVenta]);
-
-            $this->db->commit();
-            return $idVenta;
-        } catch (Exception $e) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
-            return 0;
-        }
+        return (int) $this->registrar($idUsuario, $items, $total, $valorRecibido, $idMetodoPago, $empresa, $idCliente, $pagado);
     }
 
-    /** RF 5.5: anula una venta exigiendo motivo y reintegra el stock. */
-    public function anular(int $idVenta, string $motivo, ?int $idUsuario = null): bool
+    /**
+     * Alias de cancelación compatible con VentaController.
+     */
+    public function anular(int $id, string $motivo, int $idUsuario = 0): bool
     {
-        try {
-            $this->db->beginTransaction();
-
-            $stmt = $this->db->prepare(
-                "SELECT estado FROM ventas WHERE id_venta = :v LIMIT 1"
-            );
-            $stmt->execute([':v' => $idVenta]);
-            $row = $stmt->fetch();
-            if (!$row || $row['estado'] !== 'completada') {
-                $this->db->rollBack();
-                return false;
-            }
-
-            $motivo = trim($motivo);
-            $stmt = $this->db->prepare(
-                "UPDATE ventas SET estado = 'anulada', motivo_anulacion = :m WHERE id_venta = :v"
-            );
-            $stmt->execute([':m' => $motivo, ':v' => $idVenta]);
-
-            $stmt = $this->db->prepare(
-                "SELECT id_producto, cantidad FROM detalle_ventas WHERE id_venta = :v"
-            );
-            $stmt->execute([':v' => $idVenta]);
-            $detalles = $stmt->fetchAll();
-            $stmtAntes = $this->db->prepare(
-                "SELECT cantidad_stock FROM productos WHERE id_producto = :p FOR UPDATE"
-            );
-            $stmtStock = $this->db->prepare(
-                "UPDATE productos SET cantidad_stock = cantidad_stock + :cant WHERE id_producto = :p"
-            );
-            $stmtMov = $this->db->prepare(
-                "INSERT INTO movimientos_inventario
-                 (id_producto, tipo, cantidad, stock_antes, stock_despues, id_venta, motivo, id_usuario)
-                 VALUES (:p, 'entrada', :cant, :antes, :despues, :v, :motivo, :u)"
-            );
-            foreach ($detalles as $det) {
-                $idProd = (int) $det['id_producto'];
-                $cant = (int) $det['cantidad'];
-                $stmtAntes->execute([':p' => $idProd]);
-                $prow = $stmtAntes->fetch();
-                $antes = $prow ? (int) $prow['cantidad_stock'] : 0;
-                $stmtStock->execute([':cant' => $cant, ':p' => $idProd]);
-                $stmtMov->execute([
-                    ':p' => $idProd, ':cant' => $cant,
-                    ':antes' => $antes, ':despues' => $antes + $cant,
-                    ':v' => $idVenta, ':motivo' => mb_substr('Anulación venta #' . $idVenta . ': ' . $motivo, 0, 255),
-                    ':u' => $idUsuario,
-                ]);
-            }
-
-            $this->db->commit();
-            return true;
-        } catch (Exception $e) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
-            return false;
-        }
-    }
-
-    public function obtenerTodas(int $limite = 100): array
-    {
-        $stmt = $this->db->prepare(
-            "SELECT v.*, u.username AS vendedor, c.nombre AS cliente, m.nombre_metodo, m.empresa AS empresa_pago
-             FROM ventas v
-             INNER JOIN usuarios u ON u.id = v.id_usuario
-             LEFT JOIN clientes c ON c.id_cliente = v.id_cliente
-             LEFT JOIN metodos_pago m ON m.id_metodo_pago = v.id_metodo_pago
-             ORDER BY v.id_venta DESC LIMIT :lim"
-        );
-        $stmt->bindValue(':lim', $limite, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
-    }
-
-    public function obtenerPorId(int $id)
-    {
-        $stmt = $this->db->prepare(
-            "SELECT v.*, u.username AS vendedor, c.nombre AS cliente, c.correo_electronico AS correo_cliente,
-                    m.nombre_metodo, m.empresa AS empresa_pago
-             FROM ventas v
-             INNER JOIN usuarios u ON u.id = v.id_usuario
-             LEFT JOIN clientes c ON c.id_cliente = v.id_cliente
-             LEFT JOIN metodos_pago m ON m.id_metodo_pago = v.id_metodo_pago
-             WHERE v.id_venta = :v LIMIT 1"
-        );
-        $stmt->execute([':v' => $id]);
-        return $stmt->fetch();
-    }
-
-    public function obtenerDetalle(int $idVenta): array
-    {
-        $stmt = $this->db->prepare(
-            "SELECT d.*, p.nombre AS nombre_producto, p.codigo_barras,
-                    (d.cantidad * d.precio_unitario) AS subtotal
-             FROM detalle_ventas d
-             INNER JOIN productos p ON p.id_producto = d.id_producto
-             WHERE d.id_venta = :v ORDER BY p.nombre ASC"
-        );
-        $stmt->execute([':v' => $idVenta]);
-        return $stmt->fetchAll();
-    }
-
-    /** Ventas del día para el dashboard. */
-    public function resumenHoy(): array
-    {
-        $stmt = $this->db->query(
-            "SELECT COUNT(*) AS cantidad, COALESCE(SUM(total), 0) AS total
-             FROM ventas WHERE DATE(fecha) = CURDATE() AND estado = 'completada'"
-        );
-        return $stmt->fetch() ?: ['cantidad' => 0, 'total' => 0];
-    }
-
-    public function ultimas(int $limite = 5): array
-    {
-        return $this->obtenerTodas($limite);
+        return $this->cancelar($id, $motivo);
     }
 }

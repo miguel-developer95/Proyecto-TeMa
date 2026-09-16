@@ -1,0 +1,67 @@
+<?php
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$rolActual = strtolower($_SESSION['user']['rol'] ?? '');
+$paginaActual = basename($_SERVER['PHP_SELF']);
+?>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="appSidebar">
+    <div>
+        <div class="sidebar-header">
+            <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Cerrar menú">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <button type="button" class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Ocultar menú para más espacio" aria-label="Ocultar menú">
+                <i class="fa-solid fa-angles-left"></i>
+            </button>
+            <img src="/Proyecto-TeMa/public/logo.png" alt="Logo">
+            <h3>Tentaciones Marlly</h3>
+        </div>
+        <ul class="menu-list">
+
+            <?php if ($rolActual === 'administrador'): ?>
+                <li class="<?= $paginaActual === 'dashboard.php' ? 'active' : '' ?>">
+                    <a href="/Proyecto-TeMa/view/dashboard.php">
+                        <i class="fa-solid fa-chart-line"></i> Dashboard
+                    </a>
+                </li>
+
+                <li class="<?= $paginaActual === 'producto.php' ? 'active' : '' ?>">
+                    <a href="/Proyecto-TeMa/view/producto.php">
+                        <i class="fa-solid fa-box"></i> Inventario
+                    </a>    
+                </li>
+
+                <li class="<?= $paginaActual === 'compra.php' ? 'active' : '' ?>">
+                    <a href="/Proyecto-TeMa/view/compra.php">
+                        <i class="fa-solid fa-cart-shopping"></i> Compras
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <?php if (in_array($rolActual, ['administrador', 'vendedor', 'cajero'], true)): ?>
+                <li class="<?= $paginaActual === 'pos.php' ? 'active' : '' ?>">
+                    <a href="/Proyecto-TeMa/view/pos.php">
+                        <i class="fa-solid fa-cash-register"></i> Ventas
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <?php if ($rolActual === 'administrador'): ?>
+                <li class="<?= $paginaActual === 'configuracion.php' ? 'active' : '' ?>">
+                    <a href="/Proyecto-TeMa/view/configuracion.php">
+                        <i class="fa-solid fa-gear"></i> Configuración
+                    </a>
+                </li>
+            <?php endif; ?>
+
+        </ul>
+    </div>
+    <a href="/Proyecto-TeMa/index.php?action=logout" class="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+    </a>
+</aside>

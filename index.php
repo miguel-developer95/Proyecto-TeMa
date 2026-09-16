@@ -1,81 +1,183 @@
 <?php
-declare(strict_types=1);
+date_default_timezone_set('America/Bogota');
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-/**
- * Front controller: recibe todas las acciones POST/GET de formularios
- * y las despacha al controlador correspondiente.
- */
-require_once __DIR__ . '/config/config.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
+
 require_once __DIR__ . '/controller/UsuarioController.php';
-require_once __DIR__ . '/controller/ProductoController.php';
-require_once __DIR__ . '/controller/CompraController.php';
-require_once __DIR__ . '/controller/VentaController.php';
-require_once __DIR__ . '/controller/InformeController.php';
+$controller = new UsuarioController();
 
-$VENDEDORES = ['vendedor', 'cajero', 'administrador'];
-$ADMINS = ['administrador'];
+// Captura 'action' de GET o POST
+$action = $_REQUEST['action'] ?? '';
 
-/** action => [controller, method, rolesPermitidos|null, soloPOST] */
-$routes = [
-    // Auth (públicas)
-    'register' => [UsuarioController::class, 'registrar', null, true],
-    'login' => [UsuarioController::class, 'login', null, true],
-    'logout' => [UsuarioController::class, 'logout', null, false],
-    'solicitar_reset' => [UsuarioController::class, 'solicitarReset', null, true],
-    'restablecer' => [UsuarioController::class, 'restablecer', null, true],
-    // Usuarios (admin)
-    'save_user' => [UsuarioController::class, 'guardar', $ADMINS, true],
-    'user_estado' => [UsuarioController::class, 'estado', $ADMINS, true],
-    // Inventario (admin)
-    'producto_guardar' => [ProductoController::class, 'guardar', $ADMINS, true],
-    'producto_actualizar' => [ProductoController::class, 'actualizar', $ADMINS, true],
-    'producto_estado' => [ProductoController::class, 'estado', $ADMINS, true],
-    // Proveedores y compras (admin)
-    'proveedor_guardar' => [CompraController::class, 'proveedorGuardar', $ADMINS, true],
-    'proveedor_estado' => [CompraController::class, 'proveedorEstado', $ADMINS, true],
-    'compra_item_add' => [CompraController::class, 'compraItemAdd', $ADMINS, true],
-    'compra_item_remove' => [CompraController::class, 'compraItemRemove', $ADMINS, true],
-    'compra_guardar' => [CompraController::class, 'compraGuardar', $ADMINS, true],
-    'compra_actualizar' => [CompraController::class, 'compraActualizar', $ADMINS, true],
-    'compra_anular' => [CompraController::class, 'compraAnular', $ADMINS, true],
-    // POS (vendedores y admin)
-    'pos_add' => [VentaController::class, 'posAdd', $VENDEDORES, true],
-    'pos_qty' => [VentaController::class, 'posSetQty', $VENDEDORES, true],
-    'pos_remove' => [VentaController::class, 'posRemove', $VENDEDORES, true],
-    'pos_clear' => [VentaController::class, 'posClear', $VENDEDORES, true],
-    'pos_pause' => [VentaController::class, 'posPause', $VENDEDORES, true],
-    'pos_resume' => [VentaController::class, 'posResume', $VENDEDORES, true],
-    'pos_pausada_delete' => [VentaController::class, 'posPausadaDelete', $VENDEDORES, true],
-    'pos_cliente' => [VentaController::class, 'posCliente', $VENDEDORES, true],
-    'cliente_rapido' => [VentaController::class, 'clienteRapido', $VENDEDORES, true],
-    'checkout' => [VentaController::class, 'checkout', $VENDEDORES, true],
-    'venta_anular' => [VentaController::class, 'anular', $VENDEDORES, true],
-    // Informes (admin)
-    'informe_guardar' => [InformeController::class, 'guardar', $ADMINS, true],
-];
+if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
-$action = (string) ($_REQUEST['action'] ?? '');
-$method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+    // Datos del registro (deben coincidir con los name="" del formulario en register.php)
+    $nombre = $_POST['nombre'] ?? '';
+    $apellido = $_POST['apellido'] ?? '';
+    $rol = $_POST['rol'] ?? 'Administrador';
+    $password = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirmPassword'] ?? null;
+    $email = $_POST['email'] ?? null;
+    $documento = $_POST['documento'] ?? null;
 
-if ($action === '' || !isset($routes[$action])) {
-    // Sin acción: home según sesión y rol (RF 1.4)
-    if (is_logged_in()) {
-        redirect_by_role();
+    if ($confirmPassword !== null && $password !== $confirmPassword) {
+        header("Location: /Proyecto-TeMa/view/register.php?error=password_mismatch");
+        exit();
     }
-    redirect('view/login.php');
-}
 
-[$controllerClass, $controllerMethod, $roles, $onlyPost] = $routes[$action];
-
-if ($roles !== null) {
-    require_role($roles);
-}
-if ($onlyPost) {
-    if ($method !== 'POST') {
-        show_error(405, 'Método no permitido.');
+    if (strlen(trim($password)) < 8) {
+        header("Location: /Proyecto-TeMa/view/register.php?error=short_password");
+        exit();
     }
-    csrf_check();
-}
 
-$controller = new $controllerClass();
-$controller->$controllerMethod();
+    $controller->registrar(
+        $nombre,
+        $apellido,
+        $rol,
+        $password,
+        $email,
+        $documento
+    );
+}
+elseif ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+    if (strlen($password) < 8) {
+        header("Location: /Proyecto-TeMa/view/login.php?error=short_password");
+        exit();
+    }
+    $controller->login($username, $password);
+} 
+elseif ($action === 'update_user' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id = $_POST['id'] ?? null;
+    $username = $_POST['username'] ?? '';
+    $email = $_POST['email'] ?? null;
+    $documento = $_POST['documento'] ?? null;
+    $rol = $_POST['rol'] ?? null;
+    $password = !empty($_POST['password']) ? $_POST['password'] : null;
+
+    if ($password !== null && strlen(trim($password)) < 8) {
+        header("Location: /Proyecto-TeMa/view/configuracion.php?edit_id=" . urlencode((string)$id) . "&status=short_password");
+        exit();
+    }
+
+    if ($id) {
+        $controller->editar($id, $username, $email, $documento, $password, $rol);
+    }
+} 
+elseif ($action === 'delete_user') {
+    $id = $_GET['id'] ?? null;
+    if ($id) {
+        $controller->eliminar($id);
+    }
+} 
+elseif ($action === 'toggle_estado') {
+    $id = $_GET['id'] ?? null;
+    if ($id) {
+        $controller->cambiarEstado($id);
+    }
+}
+elseif ($action === 'solicitar_recuperacion' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = $_POST['email'] ?? '';
+    $controller->solicitarRecuperacion($email);
+}
+elseif ($action === 'restablecer_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $token = $_POST['token'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $passwordConfirmar = $_POST['password_confirmar'] ?? '';
+
+    if (strlen($password) < 8) {
+        header("Location: /Proyecto-TeMa/view/recuperar_contra.php?token=" . urlencode($token) . "&error=muy_corta");
+        exit();
+    }
+
+    $controller->restablecerPassword($token, $password, $passwordConfirmar);
+}
+elseif ($action === 'logout') {
+    $controller->logout();
+}
+// --- Acciones de Punto de Venta (POS) y Ventas ---
+elseif ($action === 'pos_add') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->posAdd();
+}
+elseif ($action === 'pos_qty') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->posSetQty();
+}
+elseif ($action === 'pos_remove') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->posRemove();
+}
+elseif ($action === 'pos_clear') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->posClear();
+}
+elseif ($action === 'pos_pause') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->posPause();
+}
+elseif ($action === 'pos_resume') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->posResume();
+}
+elseif ($action === 'pos_pausada_delete') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->posPausadaDelete();
+}
+elseif ($action === 'pos_checkout' || $action === 'checkout') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->checkout();
+}
+elseif ($action === 'pos_cliente') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->posCliente();
+}
+elseif ($action === 'cliente_rapido') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->clienteRapido();
+}
+elseif ($action === 'venta_anular') {
+    require_once __DIR__ . '/controller/VentaController.php';
+    (new VentaController())->anular();
+}
+// --- Acciones de Inventario de Productos ---
+elseif ($action === 'descontinuar_producto') {
+    require_once __DIR__ . '/controller/producto.php';
+    (new ProductoController())->descontinuar();
+}
+elseif ($action === 'modificar_producto') {
+    require_once __DIR__ . '/controller/producto.php';
+    (new ProductoController())->editar();
+}
+elseif ($action === 'registrar_producto') {
+    require_once __DIR__ . '/controller/producto.php';
+    (new ProductoController())->registrar();
+}
+elseif ($action === 'exportar_informe') {
+    require_once __DIR__ . '/controller/InformeController.php';
+    $informeCtrl = new InformeController();
+    $tipo = $_GET['tipo'] ?? 'ganancia_producto';
+    $formato = $_GET['formato'] ?? 'csv';
+    $inicio = $_GET['fecha_inicio'] ?? date('Y-m-01');
+    $fin = $_GET['fecha_fin'] ?? date('Y-m-d');
+
+    if ($formato === 'pdf') {
+        $informeCtrl->exportarPDF($tipo, $inicio, $fin);
+    } else {
+        $informeCtrl->exportarCSV($tipo, $inicio, $fin);
+    }
+}
+else {
+    // Si el usuario ya inició sesión, redirigir al dashboard en lugar del login
+    if (isset($_SESSION['user'])) {
+        header("Location: /Proyecto-TeMa/view/dashboard.php");
+    } else {
+        header("Location: /Proyecto-TeMa/view/login.php");
+    }
+    exit();
+}
+?>

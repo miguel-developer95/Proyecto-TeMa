@@ -1,12 +1,13 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../helpers/funciones.php';
 require_once __DIR__ . '/../model/venta.php';
 require_once __DIR__ . '/../model/producto.php';
 require_once __DIR__ . '/../model/cliente.php';
-require_once __DIR__ . '/../model/metodo_pago.php';
-require_once __DIR__ . '/../model/venta_pausada.php';
-require_once __DIR__ . '/../model/historial.php';
+require_once __DIR__ . '/../model/metodos_pago.php';
+require_once __DIR__ . '/../model/ventas_pausadas.php';
+require_once __DIR__ . '/../model/historial_modificacion.php';
 
 /** Punto de venta y anulaciones. Roles vendedor/cajero/administrador. */
 class VentaController
@@ -20,6 +21,12 @@ class VentaController
         $this->ventas = new Venta();
         $this->productos = new Producto();
         $this->historial = new Historial();
+    }
+
+    /** Compara el estado de un producto sin importar mayúsculas/minúsculas ni espacios. */
+    private function estaActivo(array $p): bool
+    {
+        return strtolower(trim((string) ($p['estado'] ?? ''))) === 'activo';
     }
 
     /** @return array<int, int> id_producto => cantidad */
@@ -51,7 +58,7 @@ class VentaController
             }
         }
 
-        if (!$prod || $prod['estado'] !== 'activo') {
+        if (!$prod || !$this->estaActivo($prod)) {
             flash('error', 'Producto no encontrado o inactivo.');
             redirect('view/pos.php');
         }
@@ -227,11 +234,12 @@ class VentaController
 
         $idMetodo = (int) post('id_metodo_pago');
         $metodo = (new MetodoPago())->obtenerPorId($idMetodo);
-        if (!$metodo || $metodo['estado'] !== 'activo') {
+        if (!$metodo || strtolower(trim((string) ($metodo['estado'] ?? ''))) !== 'activo') {
             flash('error', 'Selecciona un método de pago válido.');
             redirect('view/pos.php');
         }
 
+        $pagado = strtolower(trim((string) post('pagado'))) === 'no' ? 'no' : 'si';
         $valorRecibido = (float) post('valor_recibido');
         $idCliente = !empty($_SESSION['pos_cliente']) ? (int) $_SESSION['pos_cliente'] : null;
         $empresa = strtolower((string) $metodo['nombre_metodo']) === 'efectivo'
@@ -241,7 +249,7 @@ class VentaController
         $items = [];
         foreach ($cart as $idProd => $cant) {
             $p = $this->productos->obtenerPorId($idProd);
-            if (!$p || $p['estado'] !== 'activo') {
+            if (!$p || !$this->estaActivo($p)) {
                 flash('error', 'Un producto del carrito ya no está disponible.');
                 redirect('view/pos.php');
             }
@@ -254,7 +262,7 @@ class VentaController
 
         $idVenta = $this->ventas->crear(
             $items, $idMetodo, $valorRecibido,
-            (int) (current_user()['id'] ?? 0), $idCliente, $empresa
+            (int) (current_user()['id'] ?? 0), $idCliente, $empresa, $pagado
         );
 
         if ($idVenta > 0) {

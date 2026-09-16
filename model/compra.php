@@ -1,371 +1,186 @@
 <?php
-declare(strict_types=1);
+// model/compra.php
+require_once __DIR__ . '/../config/connection.php';
 
-require_once __DIR__ . '/../config/Connection.php';
-
-/**
- * Modelo de compras. Tablas: compras, detalle_compras. (RF 4.1, 4.3, 4.4)
- */
 class Compra
 {
-    private PDO $db;
+    /** @var PDO */
+    private PDO $conn;
+    private string $tabla = 'compras';
+
+    public ?int $id_compra = null;
+    public ?string $fecha_hora = null;
+    public ?int $id_metodo_pago = null;
+    public mixed $metodo_pago = null;
+    public ?int $id_usuario = null;
+    public ?string $estado = null;
+    public ?float $total_compra = null;
+    public ?int $id_proveedor = null;
 
     public function __construct()
     {
-        $this->db = (new Connection())->conn;
+        $this->conn = (new Connection())->conn;
     }
 
     /**
-     * RF 4.1: registra una compra y aumenta el stock (transacción).
-     * $items: [['id_producto'=>int,'cantidad'=>int,'precio_unitario_compra'=>float], ...]
-     * Retorna el id_compra o 0 si falla.
+     * Crea un nuevo registro de compra (RF 4.1).
      */
-    public function crear(
-        int $idProveedor,
-        int $idUsuario,
-        array $items,
-        ?int $idMetodoPago = null
-    ): int {
-        if (empty($items)) {
-            return 0;
+    public function crear(): bool
+    {
+        if (empty($this->id_usuario)) {
+            $this->id_usuario = (int) ($_SESSION['user']['id'] ?? $_SESSION['user']['id_usuario'] ?? 1);
         }
-        try {
-            $this->db->beginTransaction();
 
-            $total = 0.0;
-            foreach ($items as $it) {
-                $cant = (int) $it['cantidad'];
-                $precio = (float) $it['precio_unitario_compra'];
-                if ($cant <= 0 || $precio < 0) {
-                    throw new RuntimeException('Cantidades o precios inválidos.');
-                }
-                $total += $cant * $precio;
-            }
-
-            $stmt = $this->db->prepare(
-                "INSERT INTO compras (id_proveedor, id_usuario, id_metodo_pago, estado, total_compra)
-                 VALUES (:prov, :u, :mp, 'registrada', :total)"
-            );
-            $stmt->execute([
-                ':prov' => $idProveedor,
-                ':u' => $idUsuario,
-                ':mp' => $idMetodoPago,
-                ':total' => $total,
-            ]);
-            $idCompra = (int) $this->db->lastInsertId();
-
-            $stmtDet = $this->db->prepare(
-                "INSERT INTO detalle_compras (id_compra, id_producto, cantidad, precio_unitario_compra)
-                 VALUES (:c, :p, :cant, :precio)"
-            );
-            $stmtAntes = $this->db->prepare(
-                "SELECT cantidad_stock FROM productos WHERE id_producto = :p FOR UPDATE"
-            );
-            $stmtStock = $this->db->prepare(
-                "UPDATE productos SET cantidad_stock = cantidad_stock + :cant WHERE id_producto = :p"
-            );
-            // RF 5.2: kardex de entradas vinculadas a la compra
-            $stmtMov = $this->db->prepare(
-                "INSERT INTO movimientos_inventario
-                 (id_producto, tipo, cantidad, stock_antes, stock_despues, id_compra, id_usuario)
-                 VALUES (:p, 'entrada', :cant, :antes, :despues, :c, :u)"
-            );
-            foreach ($items as $it) {
-                $idProd = (int) $it['id_producto'];
-                $cant = (int) $it['cantidad'];
-                $stmtDet->execute([
-                    ':c' => $idCompra,
-                    ':p' => $idProd,
-                    ':cant' => $cant,
-                    ':precio' => (float) $it['precio_unitario_compra'],
-                ]);
-                $stmtAntes->execute([':p' => $idProd]);
-                $prow = $stmtAntes->fetch();
-                $antes = $prow ? (int) $prow['cantidad_stock'] : 0;
-                $stmtStock->execute([':cant' => $cant, ':p' => $idProd]);
-                $stmtMov->execute([
-                    ':p' => $idProd, ':cant' => $cant,
-                    ':antes' => $antes, ':despues' => $antes + $cant,
-                    ':c' => $idCompra, ':u' => $idUsuario,
-                ]);
-            }
-
-            $this->db->commit();
-            return $idCompra;
-        } catch (Exception $e) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
-            return 0;
+        if (empty($this->id_metodo_pago) && !empty($this->metodo_pago)) {
+            $this->id_metodo_pago = (int) $this->metodo_pago;
         }
-    }
+        if (empty($this->id_metodo_pago)) {
+            $this->id_metodo_pago = 1;
+        }
 
-    /** RF 4.3: historial con proveedor y usuario. */
-    public function obtenerTodas(int $limite = 100): array
-    {
-        $stmt = $this->db->prepare(
-            "SELECT c.*, p.nombre_razon_social AS proveedor, u.username AS usuario
-             FROM compras c
-             INNER JOIN proveedores p ON p.id_proveedor = c.id_proveedor
-             INNER JOIN usuarios u ON u.id = c.id_usuario
-             ORDER BY c.id_compra DESC LIMIT :lim"
-        );
-        $stmt->bindValue(':lim', $limite, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
-    }
+        $sql = "INSERT INTO {$this->tabla}
+                    (fecha_hora, id_proveedor, id_usuario, id_metodo_pago, estado, total_compra)
+                VALUES
+                    (:fecha_hora, :id_proveedor, :id_usuario, :id_metodo_pago, :estado, :total_compra)";
 
-    public function obtenerPorId(int $id)
-    {
-        $stmt = $this->db->prepare(
-            "SELECT c.*, p.nombre_razon_social AS proveedor, u.username AS usuario
-             FROM compras c
-             INNER JOIN proveedores p ON p.id_proveedor = c.id_proveedor
-             INNER JOIN usuarios u ON u.id = c.id_usuario
-             WHERE c.id_compra = :id LIMIT 1"
-        );
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch();
-    }
+        $stmt = $this->conn->prepare($sql);
 
-    public function obtenerDetalle(int $idCompra): array
-    {
-        $stmt = $this->db->prepare(
-            "SELECT d.*, p.nombre AS nombre_producto,
-                    (d.cantidad * d.precio_unitario_compra) AS subtotal
-             FROM detalle_compras d
-             INNER JOIN productos p ON p.id_producto = d.id_producto
-             WHERE d.id_compra = :c ORDER BY p.nombre ASC"
-        );
-        $stmt->execute([':c' => $idCompra]);
-        return $stmt->fetchAll();
-    }
+        $stmt->bindValue(':fecha_hora', $this->fecha_hora ?: date('Y-m-d H:i:s'));
+        $stmt->bindValue(':id_proveedor', $this->id_proveedor, PDO::PARAM_INT);
+        $stmt->bindValue(':id_usuario', $this->id_usuario, PDO::PARAM_INT);
+        $stmt->bindValue(':id_metodo_pago', $this->id_metodo_pago, PDO::PARAM_INT);
+        $stmt->bindValue(':estado', $this->estado ?: 'registrada');
+        $stmt->bindValue(':total_compra', $this->total_compra);
 
-    public function obtenerPorProveedor(int $idProveedor): array
-    {
-        $stmt = $this->db->prepare(
-            "SELECT * FROM compras WHERE id_proveedor = :p ORDER BY fecha_hora DESC"
-        );
-        $stmt->execute([':p' => $idProveedor]);
-        return $stmt->fetchAll();
-    }
-
-    /**
-     * RF 4.4: anula una compra y revierte el stock que había aumentado.
-     */
-    public function anular(int $idCompra, ?int $idUsuario = null): bool
-    {
-        try {
-            $this->db->beginTransaction();
-
-            $stmt = $this->db->prepare("SELECT estado FROM compras WHERE id_compra = :c LIMIT 1");
-            $stmt->execute([':c' => $idCompra]);
-            $row = $stmt->fetch();
-            if (!$row || $row['estado'] !== 'registrada') {
-                $this->db->rollBack();
-                return false;
-            }
-
-            // Validar que haya stock suficiente para revertir
-            $det = $this->obtenerDetalle($idCompra);
-            foreach ($det as $d) {
-                $stmt = $this->db->prepare(
-                    "SELECT cantidad_stock FROM productos WHERE id_producto = :p FOR UPDATE"
-                );
-                $stmt->execute([':p' => (int) $d['id_producto']]);
-                $prod = $stmt->fetch();
-                if (!$prod || (int) $prod['cantidad_stock'] < (int) $d['cantidad']) {
-                    $this->db->rollBack();
-                    return false;
-                }
-            }
-
-            $stmt = $this->db->prepare("UPDATE compras SET estado = 'anulada' WHERE id_compra = :c");
-            $stmt->execute([':c' => $idCompra]);
-
-            $stmtAntes = $this->db->prepare(
-                "SELECT cantidad_stock FROM productos WHERE id_producto = :p"
-            );
-            $stmtStock = $this->db->prepare(
-                "UPDATE productos SET cantidad_stock = cantidad_stock - :cant WHERE id_producto = :p"
-            );
-            $stmtMov = $this->db->prepare(
-                "INSERT INTO movimientos_inventario
-                 (id_producto, tipo, cantidad, stock_antes, stock_despues, id_compra, motivo, id_usuario)
-                 VALUES (:p, 'salida', :cant, :antes, :despues, :c, :motivo, :u)"
-            );
-            foreach ($det as $d) {
-                $idProd = (int) $d['id_producto'];
-                $cant = (int) $d['cantidad'];
-                $stmtAntes->execute([':p' => $idProd]);
-                $prow = $stmtAntes->fetch();
-                $antes = $prow ? (int) $prow['cantidad_stock'] : 0;
-                $stmtStock->execute([':cant' => $cant, ':p' => $idProd]);
-                $stmtMov->execute([
-                    ':p' => $idProd, ':cant' => $cant,
-                    ':antes' => $antes, ':despues' => $antes - $cant,
-                    ':c' => $idCompra,
-                    ':motivo' => 'Anulación compra #' . $idCompra,
-                    ':u' => $idUsuario,
-                ]);
-            }
-
-            $this->db->commit();
+        if ($stmt->execute()) {
+            $this->id_compra = (int) $this->conn->lastInsertId();
             return true;
-        } catch (Exception $e) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
-            return false;
         }
+
+        return false;
     }
 
     /**
-     * RF 4.4: edita una compra REGISTRADA (proveedor, método y líneas).
-     * $lineas: [['id_producto'=>int,'cantidad'=>int,'precio_unitario_compra'=>float], ...]
-     * Cantidad 0 = quitar línea. Ajusta stock por diferencia y escribe kardex.
-     * Retorna ['ok'=>bool,'error'=>?string].
+     * Historial completo de compras con nombre del proveedor y método de pago (RF 4.3).
      */
-    public function actualizar(
-        int $idCompra,
-        int $idProveedor,
-        array $lineas,
-        ?int $idMetodoPago,
-        ?int $idUsuario = null
-    ): array {
-        try {
-            $this->db->beginTransaction();
+    public function obtenerTodas(): array
+    {
+        $sql = "SELECT c.id_compra, c.fecha_hora, c.id_metodo_pago, c.id_metodo_pago AS metodo_pago,
+                       c.id_usuario, c.estado, c.total_compra, c.id_proveedor,
+                       p.nombre_razon_social, p.nombre_razon_social AS nom_proveedor,
+                       mp.nombre_metodo, mp.nombre_metodo AS tipo_pago,
+                       mp.empresa, mp.empresa AS nombre_empresa
+                FROM {$this->tabla} c
+                LEFT JOIN proveedores p ON p.id_proveedor = c.id_proveedor
+                LEFT JOIN metodos_pago mp ON mp.id_metodo_pago = c.id_metodo_pago
+                ORDER BY c.fecha_hora DESC";
 
-            $stmt = $this->db->prepare("SELECT estado FROM compras WHERE id_compra = :c LIMIT 1 FOR UPDATE");
-            $stmt->execute([':c' => $idCompra]);
-            $cab = $stmt->fetch();
-            if (!$cab) {
-                $this->db->rollBack();
-                return ['ok' => false, 'error' => 'Compra no encontrada.'];
-            }
-            if ($cab['estado'] !== 'registrada') {
-                $this->db->rollBack();
-                return ['ok' => false, 'error' => 'Solo se pueden editar compras registradas (esta está anulada).'];
-            }
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
 
-            $stmt = $this->db->prepare("SELECT estado FROM proveedores WHERE id_proveedor = :p LIMIT 1");
-            $stmt->execute([':p' => $idProveedor]);
-            $prov = $stmt->fetch();
-            if (!$prov || $prov['estado'] !== 'activo') {
-                $this->db->rollBack();
-                return ['ok' => false, 'error' => 'Selecciona un proveedor activo.'];
-            }
-
-            // Normalizar líneas (0 = quitar)
-            $nuevas = [];
-            foreach ($lineas as $ln) {
-                $idProd = (int) ($ln['id_producto'] ?? 0);
-                $cant = (int) ($ln['cantidad'] ?? 0);
-                $precio = (float) ($ln['precio_unitario_compra'] ?? 0);
-                if ($idProd <= 0 || $cant < 0 || $precio < 0) {
-                    $this->db->rollBack();
-                    return ['ok' => false, 'error' => 'Líneas inválidas (cantidades y precios no pueden ser negativos).'];
-                }
-                if ($cant === 0) {
-                    continue;
-                }
-                if (isset($nuevas[$idProd])) {
-                    $nuevas[$idProd]['cantidad'] += $cant;
-                } else {
-                    $nuevas[$idProd] = ['cantidad' => $cant, 'precio_unitario_compra' => $precio];
-                }
-            }
-            if (empty($nuevas)) {
-                $this->db->rollBack();
-                return ['ok' => false, 'error' => 'La compra debe conservar al menos una línea.'];
-            }
-
-            $detActual = $this->obtenerDetalle($idCompra);
-            $viejas = [];
-            foreach ($detActual as $d) {
-                $viejas[(int) $d['id_producto']] = (int) $d['cantidad'];
-            }
-
-            // Validar productos y stock para reducciones netas
-            $stmtProd = $this->db->prepare("SELECT cantidad_stock FROM productos WHERE id_producto = :p FOR UPDATE");
-            $stocks = [];
-            $todos = array_unique(array_merge(array_keys($viejas), array_keys($nuevas)));
-            foreach ($todos as $idProd) {
-                $stmtProd->execute([':p' => $idProd]);
-                $prow = $stmtProd->fetch();
-                if (!$prow) {
-                    $this->db->rollBack();
-                    return ['ok' => false, 'error' => "Producto #$idProd no existe."];
-                }
-                $stocks[$idProd] = (int) $prow['cantidad_stock'];
-            }
-            foreach ($todos as $idProd) {
-                $diff = ($nuevas[$idProd]['cantidad'] ?? 0) - ($viejas[$idProd] ?? 0);
-                if ($diff < 0 && $stocks[$idProd] < abs($diff)) {
-                    $this->db->rollBack();
-                    return ['ok' => false, 'error' => "Stock insuficiente para reducir el producto #$idProd (disponible {$stocks[$idProd]})."];
-                }
-            }
-
-            // Aplicar: reemplazar detalle, ajustar stock, recalcular total
-            $stmtDel = $this->db->prepare("DELETE FROM detalle_compras WHERE id_compra = :c");
-            $stmtDel->execute([':c' => $idCompra]);
-            $stmtIns = $this->db->prepare(
-                "INSERT INTO detalle_compras (id_compra, id_producto, cantidad, precio_unitario_compra)
-                 VALUES (:c, :p, :cant, :precio)"
-            );
-            $stmtStock = $this->db->prepare(
-                "UPDATE productos SET cantidad_stock = cantidad_stock + :dif WHERE id_producto = :p"
-            );
-            $stmtMov = $this->db->prepare(
-                "INSERT INTO movimientos_inventario
-                 (id_producto, tipo, cantidad, stock_antes, stock_despues, id_compra, motivo, id_usuario)
-                 VALUES (:p, :tipo, :cant, :antes, :despues, :c, :motivo, :u)"
-            );
-            $total = 0.0;
-            foreach ($nuevas as $idProd => $ln) {
-                $stmtIns->execute([
-                    ':c' => $idCompra, ':p' => $idProd,
-                    ':cant' => $ln['cantidad'], ':precio' => $ln['precio_unitario_compra'],
-                ]);
-                $total += $ln['cantidad'] * $ln['precio_unitario_compra'];
-            }
-            foreach ($todos as $idProd) {
-                $diff = ($nuevas[$idProd]['cantidad'] ?? 0) - ($viejas[$idProd] ?? 0);
-                if ($diff === 0) {
-                    continue;
-                }
-                $antes = $stocks[$idProd];
-                $stmtStock->execute([':dif' => $diff, ':p' => $idProd]);
-                $stmtMov->execute([
-                    ':p' => $idProd,
-                    ':tipo' => $diff > 0 ? 'entrada' : 'salida',
-                    ':cant' => abs($diff),
-                    ':antes' => $antes, ':despues' => $antes + $diff,
-                    ':c' => $idCompra,
-                    ':motivo' => 'Ajuste edición compra #' . $idCompra,
-                    ':u' => $idUsuario,
-                ]);
-            }
-
-            $stmt = $this->db->prepare(
-                "UPDATE compras SET id_proveedor = :prov, id_metodo_pago = :mp, total_compra = :total
-                 WHERE id_compra = :c"
-            );
-            $stmt->execute([':prov' => $idProveedor, ':mp' => $idMetodoPago, ':total' => $total, ':c' => $idCompra]);
-
-            $this->db->commit();
-            return ['ok' => true, 'error' => null];
-        } catch (Exception $e) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
-            return ['ok' => false, 'error' => 'No se pudo actualizar la compra.'];
-        }
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function contarCompras(): int
+    /**
+     * Obtiene una compra específica por ID.
+     */
+    public function obtenerPorId(int $id_compra): ?array
     {
-        return (int) $this->db->query("SELECT COUNT(*) FROM compras")->fetchColumn();
+        $sql = "SELECT c.id_compra, c.fecha_hora, c.id_metodo_pago, c.id_metodo_pago AS metodo_pago,
+                       c.id_usuario, c.estado, c.total_compra, c.id_proveedor,
+                       p.nombre_razon_social, p.nombre_razon_social AS nom_proveedor,
+                       mp.nombre_metodo, mp.nombre_metodo AS tipo_pago,
+                       mp.empresa, mp.empresa AS nombre_empresa
+                FROM {$this->tabla} c
+                LEFT JOIN proveedores p ON p.id_proveedor = c.id_proveedor
+                LEFT JOIN metodos_pago mp ON mp.id_metodo_pago = c.id_metodo_pago
+                WHERE c.id_compra = :id_compra
+                LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $res = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $res ?: null;
+    }
+
+    /**
+     * Filtra el historial de compras por proveedor.
+     */
+    public function obtenerPorProveedor(int $id_proveedor): array
+    {
+        $sql = "SELECT c.id_compra, c.fecha_hora, c.id_metodo_pago, c.id_metodo_pago AS metodo_pago,
+                       c.id_usuario, c.estado, c.total_compra, c.id_proveedor,
+                       p.nombre_razon_social, p.nombre_razon_social AS nom_proveedor,
+                       mp.nombre_metodo, mp.nombre_metodo AS tipo_pago,
+                       mp.empresa, mp.empresa AS nombre_empresa
+                FROM {$this->tabla} c
+                LEFT JOIN proveedores p ON p.id_proveedor = c.id_proveedor
+                LEFT JOIN metodos_pago mp ON mp.id_metodo_pago = c.id_metodo_pago
+                WHERE c.id_proveedor = :id_proveedor
+                ORDER BY c.fecha_hora DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(':id_proveedor', $id_proveedor, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Actualiza una compra existente (RF 4.4).
+     */
+    public function actualizar(): bool
+    {
+        if (empty($this->id_metodo_pago) && !empty($this->metodo_pago)) {
+            $this->id_metodo_pago = (int) $this->metodo_pago;
+        }
+
+        $sql = "UPDATE {$this->tabla}
+                SET fecha_hora = :fecha_hora,
+                    id_metodo_pago = :id_metodo_pago,
+                    estado = :estado,
+                    total_compra = :total_compra,
+                    id_proveedor = :id_proveedor
+                WHERE id_compra = :id_compra";
+
+        $stmt = $this->conn->prepare($sql);
+
+        $stmt->bindValue(':fecha_hora', $this->fecha_hora);
+        $stmt->bindValue(':id_metodo_pago', $this->id_metodo_pago, PDO::PARAM_INT);
+        $stmt->bindValue(':estado', $this->estado);
+        $stmt->bindValue(':total_compra', $this->total_compra);
+        $stmt->bindValue(':id_proveedor', $this->id_proveedor, PDO::PARAM_INT);
+        $stmt->bindValue(':id_compra', $this->id_compra, PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
+
+    /**
+     * Actualiza solo el estado de una compra.
+     */
+    public function actualizarEstado(int $id_compra, string $estado): bool
+    {
+        $sql = "UPDATE {$this->tabla} SET estado = :estado WHERE id_compra = :id_compra";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(':estado', $estado);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
+
+    /**
+     * Elimina un registro de compra por ID.
+     */
+    public function eliminar(int $id_compra): bool
+    {
+        $sql = "DELETE FROM {$this->tabla} WHERE id_compra = :id_compra";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(':id_compra', $id_compra, PDO::PARAM_INT);
+
+        return $stmt->execute();
     }
 }
