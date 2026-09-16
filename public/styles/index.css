@@ -42,36 +42,37 @@ body {
 }
 
 .login-card--register {
-    max-width: 490px;
-    padding: 22px 30px 18px;
+    max-width: 500px;
+    padding: 28px 32px 24px;
+    margin: auto;
 }
 
 .login-card--register .shop-logo {
-    width: 75px;
-    height: 75px;
+    width: 105px;
+    height: 105px;
     margin-bottom: 2px;
 }
 
 .login-card--register .tagline {
-    font-size: 9.5px;
-    margin: 2px 0 6px;
+    font-size: 10px;
+    margin: 3px 0 10px;
 }
 
 .login-card--register .welcome {
-    font-size: 19px;
+    font-size: 20px;
     margin-bottom: 2px;
 }
 
 .login-card--register .subtitle {
-    font-size: 12.5px;
-    margin-bottom: 10px;
+    font-size: 13px;
+    margin-bottom: 14px;
 }
 
 .login-card--register .input-group,
 .login-card--register .input-group1 {
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    border-radius: 9px;
+    padding: 11px 14px;
+    margin-bottom: 11px;
+    border-radius: 10px;
 }
 
 .login-card--register .input-group i,
@@ -82,18 +83,18 @@ body {
 
 .login-card--register .input-group input,
 .login-card--register .input-group1 select {
-    font-size: 13px;
+    font-size: 13.5px;
 }
 
 .login-card--register button {
-    padding: 9px 12px;
-    font-size: 14px;
+    padding: 12px;
+    font-size: 15px;
     margin-top: 4px;
 }
 
 .login-card--register .register-link {
-    margin-top: 8px !important;
-    font-size: 12.5px !important;
+    margin-top: 10px !important;
+    font-size: 13px !important;
 }
 
 .shop-logo {
