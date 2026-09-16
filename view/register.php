@@ -24,54 +24,50 @@ if (isset($_SESSION['user'])) {
     <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             min-height: 100vh;
+            height: 100%;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-sizing: border-box;
             background: #ffd8e8;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            box-sizing: border-box;
         }
 
         .login-wrapper {
             width: 100%;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: auto;
+            padding: 12px;
+            box-sizing: border-box;
         }
 
         .login-card--register {
             margin: auto;
-            width: 100%;
-            max-width: 500px;
         }
 
-        .register-row-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        @media (min-height: 540px) {
-            body {
-                overflow-y: hidden;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 12px;
+        @media (max-height: 550px) {
+            html, body {
+                height: auto;
                 overflow-y: auto;
             }
-            .register-row-2 {
-                grid-template-columns: 1fr;
-                gap: 0;
-            }
-            .login-card--register {
-                padding: 24px 20px 20px;
+            .login-wrapper {
+                min-height: auto;
+                padding-top: 15px;
+                padding-bottom: 15px;
             }
         }
     </style>
@@ -80,7 +76,7 @@ if (isset($_SESSION['user'])) {
 <body>
 
     <div class="login-wrapper">
-        <div class="login-card login-card--register" style="max-width: 500px; width: 100%;">
+        <div class="login-card login-card--register" style="max-width: 490px; width: 100%;">
 
             <img src="/Proyecto-TeMa/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
 
@@ -118,7 +114,7 @@ if (isset($_SESSION['user'])) {
                 <input type="hidden" name="action" value="register">
                 <?= csrf_field() ?>
 
-                <div class="register-row-2">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="input-group">
                         <i class="fa-solid fa-user"></i>
                         <input type="text" name="nombre" placeholder="Nombre" required>
@@ -130,19 +126,12 @@ if (isset($_SESSION['user'])) {
                     </div>
                 </div>
 
-                <div class="register-row-2">
-                    <div class="input-group1"> 
-                        <i class="fa-solid fa-id-badge"></i>
-                        <select name="rol" required>
-                            <option value="">Selecciona rol</option>
-                            <option value="Administrador">Administrador</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <i class="fa-solid fa-id-card"></i>
-                        <input type="text" id="documento" name="documento" placeholder="N° Documento" required>
-                    </div>
+                <div class="input-group1"> 
+                    <i class="fa-solid fa-id-badge"></i>
+                    <select name="rol" required>
+                        <option value="">Selecciona un rol</option>
+                        <option value="Administrador">Administrador</option>
+                    </select>
                 </div>
 
                 <div class="input-group">
@@ -150,18 +139,21 @@ if (isset($_SESSION['user'])) {
                     <input type="email" id="email" name="email" placeholder="Correo electrónico" required>
                 </div>
 
-                <div class="register-row-2">
-                    <div class="input-group">
-                        <i class="fa-solid fa-lock"></i>
-                        <input type="password" id="password" name="password" placeholder="Contraseña (mín 8)" required minlength="8">
-                        <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
-                    </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-id-card"></i>
+                    <input type="text" id="documento" name="documento" placeholder="Número de documento" required>
+                </div>
 
-                    <div class="input-group">
-                        <i class="fa-solid fa-lock"></i>
-                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirmar clave" required minlength="8">
-                        <i class="fa-solid fa-eye toggle-eye" id="toggleConfirmPassword"></i>
-                    </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="password" name="password" placeholder="Contraseña (mínimo 8 caracteres)" required minlength="8">
+                    <i class="fa-solid fa-eye toggle-eye" id="toggleEye"></i>
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirmar Contraseña" required minlength="8">
+                    <i class="fa-solid fa-eye toggle-eye" id="toggleConfirmPassword"></i>
                 </div>
 
                 <button type="submit">Registrarme</button>
