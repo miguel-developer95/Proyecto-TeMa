@@ -28,7 +28,7 @@ if (isset($_SESSION['user'])) {
 <body>
 
     <div class="login-wrapper">
-        <div class="login-card login-card--register" style="max-width: 540px; width: 100%;">
+        <div class="login-card login-card--register" style="max-width: 490px; width: 100%;">
 
             <img src="/Proyecto-TeMa/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
 

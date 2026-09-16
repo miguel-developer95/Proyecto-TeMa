@@ -33,7 +33,7 @@ if ($token) {
 
 <body>
     <div class="login-wrapper">
-        <div class="login-card login-card--recuperar" style="max-width: 500px; width: 100%;">
+        <div class="login-card login-card--recuperar" style="max-width: 460px; width: 100%;">
             <img src="/Proyecto-TeMa/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
             <p class="tagline">MINI TIENDA DE CONSUMO DIARIO</p>
 

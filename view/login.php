@@ -44,7 +44,7 @@ if (isset($_GET['sesion_expirada'])) {
 <body>
 
     <div class="login-wrapper">
-        <div class="login-card login-card--login" style="max-width: 480px; width: 100%;">
+        <div class="login-card login-card--login" style="max-width: 440px; width: 100%;">
 
             <img src="/Proyecto-TeMa/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
 
