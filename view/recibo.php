@@ -112,6 +112,18 @@ $detalle = $recibo['detalle'] ?? [];
             color: #c62828;
         }
 
+        .status-pagado {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .status-nopagado {
+            background-color: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffe0b2;
+        }
+
         .receipt-meta {
             font-size: 13px;
             margin-bottom: 18px;
@@ -279,9 +291,15 @@ $detalle = $recibo['detalle'] ?? [];
                 <p>Razón Social: Marlly Store & Co.</p>
                 <p>Tel: +57 300 000 0000 | Pereira, Colombia</p>
                 
-                <span class="badge-status status-<?= htmlspecialchars($venta['estado'] ?? 'completada') ?>">
-                    <?= htmlspecialchars(strtoupper($venta['estado'] ?? 'COMPLETADA')) ?>
-                </span>
+                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px;">
+                    <span class="badge-status status-<?= htmlspecialchars($venta['estado'] ?? 'completada') ?>">
+                        <?= htmlspecialchars(strtoupper($venta['estado'] ?? 'COMPLETADA')) ?>
+                    </span>
+                    <span class="badge-status <?= (($venta['pagado'] ?? 'si') === 'si') ? 'status-pagado' : 'status-nopagado' ?>">
+                        <i class="fa-solid <?= (($venta['pagado'] ?? 'si') === 'si') ? 'fa-circle-check' : 'fa-clock' ?>"></i>
+                        <?= (($venta['pagado'] ?? 'si') === 'si') ? 'PAGADO' : 'NO PAGADO' ?>
+                    </span>
+                </div>
             </div>
 
             <div class="receipt-meta">
@@ -300,6 +318,13 @@ $detalle = $recibo['detalle'] ?? [];
                 <div class="meta-row">
                     <span>Cliente:</span>
                     <strong><?= htmlspecialchars($venta['cliente'] ?: 'Consumidor Final') ?></strong>
+                </div>
+                <div class="meta-row">
+                    <span>Estado del Pago:</span>
+                    <strong style="color: <?= (($venta['pagado'] ?? 'si') === 'si') ? '#2e7d32' : '#e65100' ?>;">
+                        <i class="fa-solid <?= (($venta['pagado'] ?? 'si') === 'si') ? 'fa-circle-check' : 'fa-clock' ?>"></i>
+                        <?= (($venta['pagado'] ?? 'si') === 'si') ? 'Pagado' : 'No pagado (Pendiente)' ?>
+                    </strong>
                 </div>
                 <?php if (!empty($venta['correo_electronico'])): ?>
                 <div class="meta-row">
@@ -345,6 +370,12 @@ $detalle = $recibo['detalle'] ?? [];
                 <div class="totals-row">
                     <span>Método de Pago:</span>
                     <strong><?= htmlspecialchars($venta['nombre_metodo'] ?: ($venta['empresa'] ?: 'Efectivo')) ?></strong>
+                </div>
+                <div class="totals-row">
+                    <span>Estado de Pago:</span>
+                    <strong style="color: <?= (($venta['pagado'] ?? 'si') === 'si') ? '#2e7d32' : '#e65100' ?>;">
+                        <?= (($venta['pagado'] ?? 'si') === 'si') ? 'Pagado' : 'Pendiente de pago / Fiado' ?>
+                    </strong>
                 </div>
                 <div class="totals-row">
                     <span>Recibido:</span>

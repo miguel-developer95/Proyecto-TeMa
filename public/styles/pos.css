@@ -1,7 +1,18 @@
 /* public/styles/pos.css — Estilos para el Punto de Venta (POS) inspirados en la identidad visual de Tentaciones Marlly */
 
+/* Asegurar pie de página pegado abajo */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.app-footer {
+    margin-top: auto !important;
+}
+
 .pos-container {
-    max-width: 1400px;
+    width: 100%;
     margin: 0 auto;
 }
 
@@ -24,32 +35,47 @@
     margin-left: 17px;
 }
 
+/* Grid superior de 2 columnas balanceadas (espejo de compras) */
+.pos-grid-top,
 .pos-grid {
     display: grid;
-    grid-template-columns: 1.25fr 0.95fr;
+    grid-template-columns: 1.35fr 1fr;
     gap: 25px;
-    align-items: start;
+    margin-bottom: 25px;
+    align-items: stretch;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
+    .pos-grid-top,
     .pos-grid {
         grid-template-columns: 1fr;
     }
 }
 
-.crud-card {
+.panel-pos-venta,
+.panel-pos-cobro {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-bottom: 0 !important;
+}
+
+.crud-card,
+.content-box {
     background: #ffffff;
     border-radius: 20px;
     padding: 24px;
-    box-shadow: 0 8px 30px rgba(230, 60, 130, 0.1);
-    margin-bottom: 22px;
+    box-shadow: 0 4px 20px rgba(230, 60, 130, 0.08);
+    margin-bottom: 25px;
     border: 1px solid #fce4ec;
 }
 
-.crud-card h3 {
+.crud-card h3,
+.content-box h3 {
     color: #2b3a55;
     font-size: 17px;
-    font-weight: 600;
+    font-weight: 700;
+    margin-top: 0;
     margin-bottom: 18px;
     display: flex;
     align-items: center;
@@ -58,7 +84,8 @@
     padding-bottom: 12px;
 }
 
-.crud-card h3 i {
+.crud-card h3 i,
+.content-box h3 i {
     color: #e63c82;
 }
 
@@ -85,6 +112,7 @@
     background: #fff;
     color: #333;
     transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
 }
 
 .search-form input:focus,
@@ -101,7 +129,8 @@
 }
 
 /* Botones */
-.btn-primary {
+.btn-primary,
+.btn-pink {
     background: linear-gradient(135deg, #ff4f93, #e63c82);
     color: #fff;
     border: none;
@@ -119,7 +148,8 @@
     text-decoration: none;
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+.btn-pink:hover {
     opacity: 0.95;
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(230, 60, 130, 0.35);
@@ -145,6 +175,10 @@
     font-weight: 600;
     cursor: pointer;
     text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     transition: all 0.2s;
 }
 
@@ -157,39 +191,81 @@
 .btn-block {
     width: 100%;
     padding: 13px;
-    font-size: 16px;
+    font-size: 15px;
     margin-top: 15px;
 }
 
 /* Tablas en POS */
 .table-responsive {
+    width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-.crud-card table {
+.crud-card table,
+.content-box table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 8px;
 }
 
 .crud-card table th,
-.crud-card table td {
+.crud-card table td,
+.content-box table th,
+.content-box table td {
     padding: 11px 12px;
     text-align: left;
     font-size: 13.5px;
     border-bottom: 1px solid #fce4ec;
 }
 
-.crud-card table th {
-    color: #888;
-    font-weight: 600;
+.crud-card table th,
+.content-box table th {
+    color: #64748b;
+    font-weight: 700;
     text-transform: uppercase;
     font-size: 11.5px;
     letter-spacing: 0.5px;
+    background: #fff8fb;
 }
 
-.crud-card table tbody tr:hover {
+.crud-card table tbody tr:hover,
+.content-box table tbody tr:hover {
     background-color: #fdf6f9;
+}
+
+/* Tabla de ventas similar a compras */
+table.tabla-ventas {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    min-width: 680px;
+}
+
+table.tabla-ventas thead {
+    background: #fff8fb;
+}
+
+table.tabla-ventas th {
+    padding: 12px 14px;
+    font-weight: 700;
+    color: #64748b;
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #fce4ec;
+}
+
+table.tabla-ventas td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f9e8f0;
+    color: #333333;
+    white-space: nowrap;
+}
+
+table.tabla-ventas tbody tr:hover {
+    background-color: #fff9fc;
 }
 
 /* Botones de acción en tabla */
@@ -232,6 +308,52 @@
     color: #fff;
 }
 
+/* Acciones de la tabla de ventas: agrupadas y compactas */
+.acciones-venta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-action-edit,
+.btn-action-cancel {
+    padding: 5px 9px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+    white-space: nowrap;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.btn-action-edit {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.btn-action-edit:hover {
+    background: #0284c7;
+    color: #ffffff;
+}
+
+.btn-action-cancel {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.btn-action-cancel:hover {
+    background: #dc2626;
+    color: #ffffff;
+}
+
 .inline-form {
     display: inline;
     margin: 0;
@@ -244,10 +366,12 @@
 }
 
 .form-group label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 13px;
-    font-weight: 600;
-    color: #2b3a55;
+    font-weight: 700;
+    color: #4a5568;
     margin-bottom: 5px;
 }
 
@@ -269,31 +393,44 @@
 }
 
 .totals-row.total-destacado {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1.5px dashed #e63c82;
+    margin-top: 0;
+    padding-top: 0;
     font-size: 20px;
     font-weight: 700;
     color: #e63c82;
 }
 
 /* Badges */
-.badge {
-    display: inline-block;
+.badge-estado {
     padding: 4px 10px;
     border-radius: 12px;
-    font-size: 11.5px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .badge-completada {
-    background: #d7f5e3;
-    color: #1e8a4c;
+    background: #e8f5e9;
+    color: #2e7d32;
 }
 
 .badge-anulada {
-    background: #ffebee;
+    background: #fef2f2;
     color: #c62828;
+}
+
+.badge-pagado {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.badge-nopagado {
+    background: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffe0b2;
 }
 
 /* Detalles de cliente rápido */
@@ -311,6 +448,9 @@ details.quick-client summary {
     font-weight: 600;
     color: #e63c82;
     user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 details.quick-client form {
@@ -341,4 +481,77 @@ details.quick-client form {
     background: #ffebee;
     color: #c62828;
     border: 1px solid #ffcdd2;
+}
+
+/* ==========================================================
+   Responsive Breakpoints para Punto de Venta (POS)
+   ========================================================== */
+@media (max-width: 768px) {
+    .crud-card,
+    .content-box {
+        padding: 18px 16px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+    }
+
+    .totals-row.total-destacado {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 640px) {
+    .pos-container {
+        padding: 0;
+    }
+
+    .pos-header h2 {
+        font-size: 20px;
+    }
+
+    .search-form {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .search-form input[type="text"],
+    .search-form input[type="number"],
+    .search-form input[type="email"] {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .search-form .qty-input {
+        max-width: 100% !important;
+        text-align: left;
+    }
+
+    .search-form button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .crud-card table th,
+    .crud-card table td,
+    .content-box table th,
+    .content-box table td {
+        padding: 8px 10px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    details.quick-client form {
+        flex-direction: column;
+    }
+
+    details.quick-client form input {
+        width: 100%;
+        box-sizing: border-box;
+    }
 }

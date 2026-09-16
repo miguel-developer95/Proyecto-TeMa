@@ -24,17 +24,19 @@ class Venta
         float $valorRecibido,
         ?int $idMetodoPago = null,
         ?string $empresa = null,
-        ?int $idCliente = null
+        ?int $idCliente = null,
+        string $pagado = 'si'
     ) {
         try {
             $this->db->beginTransaction();
 
             $cambio = max(0, round($valorRecibido - $total, 2));
             $numeroRecibo = 'REC-' . date('YmdHis') . '-' . mt_rand(100, 999);
+            $pagadoVal = strtolower(trim($pagado)) === 'no' ? 'no' : 'si';
 
             $queryVenta = "INSERT INTO ventas
-                (fecha, id_usuario, id_cliente, id_metodo_pago, empresa, total, valor_recibido, cambio, estado, numero_recibo)
-                VALUES (NOW(), :id_usuario, :id_cliente, :id_metodo_pago, :empresa, :total, :valor_recibido, :cambio, 'completada', :numero_recibo)";
+                (fecha, id_usuario, id_cliente, id_metodo_pago, empresa, total, valor_recibido, cambio, pagado, estado, numero_recibo)
+                VALUES (NOW(), :id_usuario, :id_cliente, :id_metodo_pago, :empresa, :total, :valor_recibido, :cambio, :pagado, 'completada', :numero_recibo)";
             $stmtVenta = $this->db->prepare($queryVenta);
             $stmtVenta->bindParam(':id_usuario', $idUsuario, PDO::PARAM_INT);
             $stmtVenta->bindParam(':id_cliente', $idCliente, PDO::PARAM_INT);
@@ -43,6 +45,7 @@ class Venta
             $stmtVenta->bindParam(':total', $total);
             $stmtVenta->bindParam(':valor_recibido', $valorRecibido);
             $stmtVenta->bindParam(':cambio', $cambio);
+            $stmtVenta->bindParam(':pagado', $pagadoVal);
             $stmtVenta->bindParam(':numero_recibo', $numeroRecibo);
             $stmtVenta->execute();
             $idVenta = (int) $this->db->lastInsertId();
@@ -87,9 +90,11 @@ class Venta
     public function obtenerTodas(int $limite = 20): array
     {
         $query = "SELECT v.id_venta, v.fecha, v.empresa, v.total, v.valor_recibido, v.cambio,
-                         v.estado, v.numero_recibo, c.nombre AS cliente
+                         v.pagado, v.estado, v.numero_recibo, c.nombre AS cliente,
+                         mp.nombre_metodo, mp.empresa AS metodo_empresa
                   FROM ventas v
                   LEFT JOIN clientes c ON v.id_cliente = c.id_cliente
+                  LEFT JOIN metodos_pago mp ON v.id_metodo_pago = mp.id_metodo_pago
                   ORDER BY v.id_venta DESC
                   LIMIT :limite";
         $stmt = $this->db->prepare($query);
@@ -162,7 +167,7 @@ class Venta
     public function generarRecibo(int $idVenta): array
     {
         $query = "SELECT v.id_venta, v.fecha, v.empresa, v.total, v.valor_recibido, v.cambio,
-                         v.numero_recibo, v.estado, c.nombre AS cliente, c.correo_electronico,
+                         v.pagado, v.numero_recibo, v.estado, c.nombre AS cliente, c.correo_electronico,
                          c.telefono AS cliente_telefono, c.documento AS cliente_documento,
                          m.nombre_metodo, u.nombre AS cajero_nombre, u.username AS cajero_usuario
                   FROM ventas v
@@ -199,13 +204,14 @@ class Venta
         float $valorRecibido,
         int $idUsuario,
         ?int $idCliente = null,
-        ?string $empresa = null
+        ?string $empresa = null,
+        string $pagado = 'si'
     ): int {
         $total = 0.0;
         foreach ($items as $item) {
             $total += ((int) $item['cantidad']) * ((float) $item['precio_unitario']);
         }
-        return (int) $this->registrar($idUsuario, $items, $total, $valorRecibido, $idMetodoPago, $empresa, $idCliente);
+        return (int) $this->registrar($idUsuario, $items, $total, $valorRecibido, $idMetodoPago, $empresa, $idCliente, $pagado);
     }
 
     /**

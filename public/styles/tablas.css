@@ -1,17 +1,19 @@
 /* tablas.css — estilos para vistas de gestión (inventario, compras, etc.) */
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 10px 20px 40px;
+/* Asegurar pie de página pegado abajo en vistas que usan tablas */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
-.container h2 {
-    color: #2b3a55;
-    font-size: 26px;
-    margin-bottom: 20px;
-    border-left: 5px solid #e63c82;
-    padding-left: 12px;
+.app-footer {
+    margin-top: auto !important;
+}
+
+.container {
+    width: 100%;
+    margin: 0 auto;
 }
 
 .table {
@@ -87,7 +89,10 @@
 
 /* Botones de acción dentro de la tabla */
 .btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     border: none;
     border-radius: 8px;
     font-size: 13px;
@@ -95,38 +100,248 @@
     cursor: pointer;
     text-decoration: none;
     text-align: center;
-    transition: opacity 0.2s, transform 0.15s;
+    transition: opacity 0.2s, transform 0.15s, background-color 0.2s;
 }
 
 .btn-sm {
-    padding: 7px 14px;
-    margin: 2px 4px 2px 0;
+    padding: 6px 12px;
+    margin: 2px 3px 2px 0;
+    font-size: 12.5px;
 }
 
 .btn-primary {
-    background-color: #2b3a55;
+    background: linear-gradient(135deg, #ff4f93, #e63c82);
     color: #fff;
+    box-shadow: 0 4px 12px rgba(230, 60, 130, 0.2);
 }
 
 .btn-primary:hover {
-    opacity: 0.85;
+    opacity: 0.95;
     transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(230, 60, 130, 0.3);
+}
+
+.btn-secondary {
+    background: #fce4ec;
+    color: #e63c82;
+    border: 1px solid #f3c6d8;
+}
+
+.btn-secondary:hover {
+    background: #e63c82;
+    color: #fff;
 }
 
 .btn-danger {
     background-color: #fff;
-    color: #e63c82;
-    border: 1.5px solid #e63c82;
+    color: #c62828;
+    border: 1.5px solid #ffcdd2;
 }
 
 .btn-danger:hover {
-    background-color: #e63c82;
+    background-color: #c62828;
     color: #fff;
+    border-color: #c62828;
 }
 
-/* Responsive: scroll horizontal en pantallas pequeñas */
-@media (max-width: 768px) {
-    .table-responsive-wrapper {
-        overflow-x: auto;
+/* Contenedor universal con scroll táctil */
+.table-responsive-wrapper,
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+}
+
+.table th,
+.table td {
+    white-space: nowrap;
+}
+
+/* Tabla inventario moderna */
+table.tabla-inventario {
+    min-width: 820px;
+    width: 100%;
+}
+
+/* Barra de Filtros de Inventario */
+.inventario-filtros-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 22px;
+    box-shadow: 0 4px 20px rgba(230, 60, 130, 0.08);
+    border: 1px solid #fce4ec;
+}
+
+.filtro-inputs-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.filtro-search {
+    position: relative;
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.filtro-search i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.filtro-search input {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    border: 1.5px solid #f3c6d8;
+    border-radius: 10px;
+    font-size: 13.5px;
+    outline: none;
+    box-sizing: border-box;
+    color: #333;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.filtro-search input:focus {
+    border-color: #e63c82;
+    box-shadow: 0 0 0 3px rgba(230, 60, 130, 0.15);
+}
+
+.filtro-select-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.filtro-select-group select,
+.filtro-paginacion-size select {
+    padding: 10px 14px;
+    border: 1.5px solid #f3c6d8;
+    border-radius: 10px;
+    font-size: 13.5px;
+    outline: none;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.filtro-select-group select:focus,
+.filtro-paginacion-size select:focus {
+    border-color: #e63c82;
+    box-shadow: 0 0 0 3px rgba(230, 60, 130, 0.15);
+}
+
+.filtro-paginacion-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* Modal responsive */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 20px;
+    padding: 26px;
+    width: 480px;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    border: 1px solid #fce4ec;
+}
+
+/* Responsive: scroll horizontal y espaciados compactos en pantallas pequeñas */
+@media (max-width: 850px) {
+    .inventario-filtros-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 16px 14px;
+    }
+
+    .filtro-inputs-row {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .filtro-search {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .filtro-select-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .filtro-select-group select {
+        width: 100%;
+    }
+
+    .filtro-paginacion-size {
+        justify-content: space-between;
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .filtro-select-group {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-grid-precios {
+        grid-template-columns: 1fr !important;
+    }
+
+    .modal-box {
+        padding: 20px 16px;
+    }
+
+    .table thead th,
+    .table tbody td {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .btn-sm {
+        padding: 6px 10px;
+        font-size: 12px;
     }
 }

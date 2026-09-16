@@ -22,76 +22,135 @@ $subtitulo = 'Gestión de catálogo de productos, existencias y alertas de stock
 require __DIR__ . '/partials/head.php';
 ?>
 
-<div class="container" style="max-width: 1400px; margin: 0 auto;">
-    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+<style>
+    /* Asegurar pie de página pegado abajo */
+    .main-content {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    .app-footer {
+        margin-top: auto !important;
+    }
+
+    .inventario-top-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .producto-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .form-action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 640px) {
+        .inventario-top-actions {
+            justify-content: stretch;
+        }
+        .inventario-top-actions button {
+            width: 100%;
+            justify-content: center;
+        }
+        .producto-form-grid {
+            grid-template-columns: 1fr;
+        }
+        .form-action-buttons {
+            flex-direction: column;
+        }
+        .form-action-buttons button {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div>
+    <div class="inventario-top-actions">
         <button class="btn-primary" onclick="toggleFormNuevo()" style="cursor: pointer;">
             <i class="fa-solid fa-plus"></i> Registrar Nuevo Producto
         </button>
     </div>
 
     <?php if ($alertaBajoStockTotal > 0): ?>
-        <div style="background:#fff3e0; color:#e65100; padding:12px 16px; border-radius:10px; margin-bottom:15px; border-left: 4px solid #f57c00; font-size:14px;">
+        <div style="background:#fff3e0; color:#e65100; padding:12px 16px; border-radius:12px; margin-bottom:18px; border-left: 4px solid #f57c00; font-size:14px; display:flex; align-items:center; gap:10px;">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            <strong>Aviso de Reabastecimiento (RF 3.5):</strong> Hay <strong><?= $alertaBajoStockTotal ?></strong> producto(s) activo(s) con stock igual o inferior a su stock mínimo configurado.
+            <div>
+                <strong>Aviso de Reabastecimiento (RF 3.5):</strong> Hay <strong><?= $alertaBajoStockTotal ?></strong> producto(s) activo(s) con stock igual o inferior a su stock mínimo configurado.
+            </div>
         </div>
     <?php endif; ?>
 
     <?php if ($msg === 'actualizado'): ?>
-        <div class="alert alert-success" style="background:#e8f5e9; color:#2e7d32; padding:12px; border-radius:10px; margin-bottom:15px;">
+        <div class="alert alert-success">
             <i class="fa-solid fa-circle-check"></i> Producto actualizado correctamente.
         </div>
     <?php elseif ($msg === 'descontinuado'): ?>
-        <div class="alert alert-success" style="background:#e8f5e9; color:#2e7d32; padding:12px; border-radius:10px; margin-bottom:15px;">
+        <div class="alert alert-success">
             <i class="fa-solid fa-circle-check"></i> Producto descontinuado (marcado como inactivo).
         </div>
     <?php elseif ($msg === 'registrado'): ?>
-        <div class="alert alert-success" style="background:#e8f5e9; color:#2e7d32; padding:12px; border-radius:10px; margin-bottom:15px;">
+        <div class="alert alert-success">
             <i class="fa-solid fa-circle-check"></i> Producto registrado con éxito en el inventario.
         </div>
     <?php elseif ($error): ?>
-        <div class="alert alert-error" style="background:#ffebee; color:#c62828; padding:12px; border-radius:10px; margin-bottom:15px;">
+        <div class="alert alert-error">
             <i class="fa-solid fa-triangle-exclamation"></i> Ocurrió un error al procesar la operación.
         </div>
     <?php endif; ?>
 
     <!-- Formulario colapsable para registrar producto (RF 3.1) -->
-    <div id="formNuevoProducto" style="display: none; background: #fff; border-radius: 20px; padding: 25px; box-shadow: 0 8px 30px rgba(230, 60, 130, 0.12); margin-bottom: 25px; border: 1px solid #fce4ec;">
-        <h3 style="color: #2b3a55; margin-bottom: 15px; font-size: 18px;"><i class="fa-solid fa-box-open" style="color:#e63c82;"></i> Nuevo Producto</h3>
+    <div id="formNuevoProducto" class="crud-card" style="display: none;">
+        <h3 style="display: flex; align-items: center; gap: 8px; margin-bottom: 18px;">
+            <i class="fa-solid fa-box-open" style="color:#e63c82;"></i> Registrar Nuevo Producto
+        </h3>
         <form action="/Proyecto-TeMa/index.php" method="POST">
             <input type="hidden" name="action" value="registrar_producto">
             <?= csrf_field() ?>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px;">
+            <div class="producto-form-grid">
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Código de Barras *</label>
-                    <input type="text" name="codigo_barras" required placeholder="Ej: 770123456789" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Código de Barras *</label>
+                    <input type="text" name="codigo_barras" required placeholder="Ej: 770123456789" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Nombre del Producto *</label>
-                    <input type="text" name="nombre" required placeholder="Ej: Galletas Festival Chocolate" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Nombre del Producto *</label>
+                    <input type="text" name="nombre" required placeholder="Ej: Galletas Festival Chocolate" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Categoría</label>
-                    <input type="text" name="categoria" placeholder="Ej: Galletas y Dulces" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Categoría</label>
+                    <input type="text" name="categoria" placeholder="Ej: Galletas y Dulces" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Precio de Compra ($) *</label>
-                    <input type="number" step="0.01" min="0" name="precio_compra" required placeholder="0.00" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Precio de Compra ($) *</label>
+                    <input type="number" step="0.01" min="0" name="precio_compra" required placeholder="0.00" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Precio de Venta ($) *</label>
-                    <input type="number" step="0.01" min="0" name="precio_venta" required placeholder="0.00" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Precio de Venta ($) *</label>
+                    <input type="number" step="0.01" min="0" name="precio_venta" required placeholder="0.00" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Stock Inicial *</label>
-                    <input type="number" min="0" name="cantidad_stock" required value="0" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Stock Inicial *</label>
+                    <input type="number" min="0" name="cantidad_stock" required value="0" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Stock Mínimo (Alerta) *</label>
-                    <input type="number" min="1" name="stock_minimo" required value="5" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Stock Mínimo (Alerta) *</label>
+                    <input type="number" min="1" name="stock_minimo" required value="5" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Proveedor (Opcional)</label>
-                    <select name="id_proveedor" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Proveedor (Opcional)</label>
+                    <select name="id_proveedor" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box; background: #fff;">
                         <option value="">-- Sin proveedor asignado --</option>
                         <?php foreach ($proveedores as $prov): ?>
                             <option value="<?= e($prov['id_proveedor']) ?>"><?= e($prov['nombre_razon_social'] ?? $prov['nom_proveedor']) ?></option>
@@ -99,43 +158,41 @@ require __DIR__ . '/partials/head.php';
                     </select>
                 </div>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Descripción</label>
-                <textarea name="descripcion" rows="2" placeholder="Detalles o especificaciones del producto..." style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box; font-family: inherit;"></textarea>
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 700; color: #4a5568; display: block; margin-bottom: 5px;">Descripción</label>
+                <textarea name="descripcion" rows="2" placeholder="Detalles o especificaciones del producto..." style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box; font-family: inherit;"></textarea>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Guardar Producto</button>
-                <button type="button" class="btn btn-danger" onclick="toggleFormNuevo()" style="padding: 10px 20px;">Cancelar</button>
+            <div class="form-action-buttons">
+                <button type="submit" class="btn btn-primary" style="padding: 10px 22px;">Guardar Producto</button>
+                <button type="button" class="btn btn-danger" onclick="toggleFormNuevo()" style="padding: 10px 22px;">Cancelar</button>
             </div>
         </form>
     </div>
 
     <!-- Barra de Filtros, Búsqueda y Paginación (Requisito 3.2) -->
-    <div style="background: #fff; border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #fce4ec; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between;">
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex: 1; min-width: 300px;">
-            <div style="position: relative; flex: 1; min-width: 220px;">
-                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #999;"></i>
-                <input type="text" id="filtroTexto" placeholder="Buscar por código o nombre..." style="width: 100%; padding: 9px 12px 9px 36px; border: 1.5px solid #f3c6d8; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box;">
+    <div class="inventario-filtros-bar">
+        <div class="filtro-inputs-row">
+            <div class="filtro-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="filtroTexto" placeholder="Buscar por código o nombre...">
             </div>
-            <div>
-                <select id="filtroCategoria" style="padding: 9px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; font-size: 14px; outline: none; background: #fff; cursor: pointer;">
+            <div class="filtro-select-group">
+                <select id="filtroCategoria">
                     <option value="">Todas las categorías</option>
                     <?php foreach ($categorias as $cat): ?>
                         <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
                     <?php endforeach; ?>
                 </select>
-            </div>
-            <div>
-                <select id="filtroEstado" style="padding: 9px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; font-size: 14px; outline: none; background: #fff; cursor: pointer;">
+                <select id="filtroEstado">
                     <option value="">Todos los estados</option>
                     <option value="activo">Activos</option>
                     <option value="inactivo">Inactivos</option>
                 </select>
             </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666;">
-            <label>Filas por página:</label>
-            <select id="filasPorPagina" style="padding: 6px 10px; border: 1.5px solid #f3c6d8; border-radius: 6px; font-size: 13px; outline: none; background: #fff; cursor: pointer;">
+        <div class="filtro-paginacion-size">
+            <label for="filasPorPagina">Filas por página:</label>
+            <select id="filasPorPagina">
                 <option value="5">5</option>
                 <option value="10" selected>10</option>
                 <option value="25">25</option>
@@ -144,80 +201,96 @@ require __DIR__ . '/partials/head.php';
         </div>
     </div>
 
-    <!-- Tabla de Inventario -->
-    <div class="table-responsive-wrapper">
-        <table class="table table-bordered align-middle" id="tablaProductos">
-            <thead>
-                <tr>
-                    <th style="cursor:pointer;" onclick="ordenarTabla(0)">Código de Barras <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
-                    <th style="cursor:pointer;" onclick="ordenarTabla(1)">Nombre <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
-                    <th style="cursor:pointer;" onclick="ordenarTabla(2)">Categoría <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
-                    <th style="cursor:pointer;" onclick="ordenarTabla(3)">P. Compra <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
-                    <th style="cursor:pointer;" onclick="ordenarTabla(4)">P. Venta <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
-                    <th style="cursor:pointer;" onclick="ordenarTabla(5)">Stock Disponible <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
-                    <th style="cursor:pointer;" onclick="ordenarTabla(6)">Estado <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="tbodyProductos">
-                <?php if (empty($productos)): ?>
-                    <tr id="filaSinDatos">
-                        <td colspan="8" style="text-align: center; color: #888; padding: 25px;">No hay productos registrados en el inventario.</td>
+    <!-- Tabla de Inventario en Tarjeta -->
+    <section class="content-box" style="margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-boxes-stacked" style="color: #e63c82;"></i> Catálogo de Productos
+            </h3>
+            <span style="font-size: 13px; color: #888888; font-weight: 600;">
+                Total: <?= count($productos) ?> productos registrados
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="tabla-inventario" id="tablaProductos">
+                <thead>
+                    <tr>
+                        <th style="cursor:pointer;" onclick="ordenarTabla(0)">Código de Barras <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                        <th style="cursor:pointer;" onclick="ordenarTabla(1)">Nombre <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                        <th style="cursor:pointer;" onclick="ordenarTabla(2)">Categoría <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                        <th style="cursor:pointer;" onclick="ordenarTabla(3)">P. Compra <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                        <th style="cursor:pointer;" onclick="ordenarTabla(4)">P. Venta <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                        <th style="cursor:pointer;" onclick="ordenarTabla(5)">Stock Disponible <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                        <th style="cursor:pointer;" onclick="ordenarTabla(6)">Estado <i class="fa-solid fa-sort" style="color:#aaa; font-size:11px;"></i></th>
+                        <th style="text-align: center;">Acciones</th>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($productos as $p): ?>
-                        <tr class="fila-producto <?= ($p['alerta_stock'] && $p['estado'] === 'activo') ? 'table-danger' : '' ?>"
-                            data-codigo="<?= htmlspecialchars(strtolower($p['codigo_barras'] ?? '')) ?>"
-                            data-nombre="<?= htmlspecialchars(strtolower($p['nombre'] ?? '')) ?>"
-                            data-categoria="<?= htmlspecialchars(strtolower($p['categoria'] ?? '')) ?>"
-                            data-estado="<?= htmlspecialchars(strtolower($p['estado'] ?? '')) ?>">
-                            <td><strong><?= htmlspecialchars($p['codigo_barras'] ?? '—') ?></strong></td>
-                            <td><?= htmlspecialchars($p['nombre']) ?></td>
-                            <td><?= htmlspecialchars($p['categoria'] ?? '—') ?></td>
-                            <td>$<?= number_format($p['precio_compra'], 2) ?></td>
-                            <td>$<?= number_format($p['precio_venta'], 2) ?></td>
-                            <td>
-                                <?= $p['cantidad_stock'] ?>
-                                <?php if ($p['alerta_stock'] && $p['estado'] === 'activo'): ?>
-                                    <span class="badge bg-warning text-dark" style="margin-left: 6px;">⚠️ Stock Agotándose</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <span class="badge <?= $p['estado'] === 'activo' ? 'bg-success' : 'bg-secondary' ?>">
-                                    <?= ucfirst($p['estado']) ?>
-                                </span>
-                            </td>
-                            <td>
-                                <!-- Editar datos (RF 3.2) -->
-                                <button class="btn btn-sm btn-primary" onclick="abrirModalEditar(<?= htmlspecialchars(json_encode($p)) ?>)">Modificar</button>
-                                
-                                <!-- RF 3.3: Descontinuar / Eliminación Lógica -->
-                                <?php if ($p['estado'] === 'activo'): ?>
-                                    <a href="/Proyecto-TeMa/index.php?action=descontinuar_producto&id=<?= $p['id_producto'] ?>" 
-                                        class="btn btn-sm btn-danger" 
-                                        onclick="return confirm('¿Está seguro de descontinuar este producto?')">
-                                        Descontinuar
-                                    </a>
-                                <?php endif; ?>
+                </thead>
+                <tbody id="tbodyProductos">
+                    <?php if (empty($productos)): ?>
+                        <tr id="filaSinDatos">
+                            <td colspan="8" style="text-align: center; color: #888; padding: 25px;">
+                                <i class="fa-solid fa-box-open" style="font-size: 24px; color: #f3c6d8; display: block; margin-bottom: 8px;"></i>
+                                No hay productos registrados en el inventario.
                             </td>
                         </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+                    <?php else: ?>
+                        <?php foreach ($productos as $p): ?>
+                            <tr class="fila-producto <?= ($p['alerta_stock'] && $p['estado'] === 'activo') ? 'table-danger' : '' ?>"
+                                data-codigo="<?= htmlspecialchars(strtolower($p['codigo_barras'] ?? '')) ?>"
+                                data-nombre="<?= htmlspecialchars(strtolower($p['nombre'] ?? '')) ?>"
+                                data-categoria="<?= htmlspecialchars(strtolower($p['categoria'] ?? '')) ?>"
+                                data-estado="<?= htmlspecialchars(strtolower($p['estado'] ?? '')) ?>">
+                                <td style="font-weight: 700; color: #2b3a55;"><?= htmlspecialchars($p['codigo_barras'] ?? '—') ?></td>
+                                <td><strong><?= htmlspecialchars($p['nombre']) ?></strong></td>
+                                <td><?= htmlspecialchars($p['categoria'] ?? '—') ?></td>
+                                <td>$<?= number_format($p['precio_compra'], 2) ?></td>
+                                <td style="font-weight: 700; color: #e63c82;">$<?= number_format($p['precio_venta'], 2) ?></td>
+                                <td>
+                                    <strong><?= $p['cantidad_stock'] ?></strong>
+                                    <?php if ($p['alerta_stock'] && $p['estado'] === 'activo'): ?>
+                                        <span class="badge bg-warning text-dark" style="margin-left: 6px;">⚠️ Stock Bajo</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="badge <?= $p['estado'] === 'activo' ? 'bg-success' : 'bg-secondary' ?>">
+                                        <?= ucfirst($p['estado']) ?>
+                                    </span>
+                                </td>
+                                <td style="text-align: center; white-space: nowrap;">
+                                    <!-- Editar datos (RF 3.2) -->
+                                    <button type="button" class="btn-action-edit" onclick="abrirModalEditar(<?= htmlspecialchars(json_encode($p)) ?>)">
+                                        <i class="fa-solid fa-pen-to-square"></i> Modificar
+                                    </button>
+                                    
+                                    <!-- RF 3.3: Descontinuar / Eliminación Lógica -->
+                                    <?php if ($p['estado'] === 'activo'): ?>
+                                        <a href="/Proyecto-TeMa/index.php?action=descontinuar_producto&id=<?= $p['id_producto'] ?>" 
+                                            class="btn-action-cancel" 
+                                            onclick="return confirm('¿Está seguro de descontinuar este producto?')">
+                                            <i class="fa-solid fa-ban"></i> Descontinuar
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
 
-    <!-- Paginador -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; flex-wrap: wrap; gap: 10px; font-size: 13px; color: #666;">
-        <div id="infoPaginacion">Mostrando productos</div>
-        <div id="controlesPaginacion" style="display: flex; gap: 5px;"></div>
-    </div>
+        <!-- Paginador -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid #fce4ec; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #64748b;">
+            <div id="infoPaginacion" style="font-weight: 600;">Mostrando productos</div>
+            <div id="controlesPaginacion" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
+        </div>
+    </section>
 </div>
 
 <!-- Modal para Modificar Producto (RF 3.2) -->
-<div id="modalEditarProducto" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
-    <div style="background: #fff; border-radius: 20px; padding: 25px; width: 480px; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-        <h3 style="color: #2b3a55; margin-bottom: 15px; border-bottom: 1px solid #fce4ec; padding-bottom: 10px;">
+<div id="modalEditarProducto" class="modal-overlay">
+    <div class="modal-box">
+        <h3 style="color: #2b3a55; margin-top: 0; margin-bottom: 16px; border-bottom: 1px solid #fce4ec; padding-bottom: 10px; display: flex; align-items: center; gap: 8px;">
             <i class="fa-solid fa-pen-to-square" style="color: #e63c82;"></i> Modificar Producto
         </h3>
         <form action="/Proyecto-TeMa/index.php" method="POST">
@@ -226,35 +299,35 @@ require __DIR__ . '/partials/head.php';
             <?= csrf_field() ?>
 
             <div style="margin-bottom: 12px;">
-                <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Producto</label>
-                <input type="text" id="edit_nombre_display" disabled style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; box-sizing: border-box;">
+                <label style="font-size: 13px; font-weight: 600; color: #4a5568; display: block; margin-bottom: 4px;">Producto</label>
+                <input type="text" id="edit_nombre_display" disabled style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; box-sizing: border-box; color: #555;">
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="modal-grid-precios" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">P. Compra ($) *</label>
-                    <input type="number" step="0.01" min="0" name="precio_compra" id="edit_precio_compra" required style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 600; color: #4a5568; display: block; margin-bottom: 4px;">P. Compra ($) *</label>
+                    <input type="number" step="0.01" min="0" name="precio_compra" id="edit_precio_compra" required style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">P. Venta ($) *</label>
-                    <input type="number" step="0.01" min="0" name="precio_venta" id="edit_precio_venta" required style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                    <label style="font-size: 13px; font-weight: 600; color: #4a5568; display: block; margin-bottom: 4px;">P. Venta ($) *</label>
+                    <input type="number" step="0.01" min="0" name="precio_venta" id="edit_precio_venta" required style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
                 </div>
             </div>
 
             <div style="margin-bottom: 12px;">
-                <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Estado</label>
-                <select name="estado" id="edit_estado" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box;">
+                <label style="font-size: 13px; font-weight: 600; color: #4a5568; display: block; margin-bottom: 4px;">Estado</label>
+                <select name="estado" id="edit_estado" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box; background: #fff;">
                     <option value="activo">Activo</option>
                     <option value="inactivo">Inactivo (Descontinuado)</option>
                 </select>
             </div>
 
             <div style="margin-bottom: 18px;">
-                <label style="font-size: 13px; color: #555; display: block; margin-bottom: 4px;">Descripción</label>
-                <textarea name="descripcion" id="edit_descripcion" rows="2" style="width: 100%; padding: 10px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box; font-family: inherit;"></textarea>
+                <label style="font-size: 13px; font-weight: 600; color: #4a5568; display: block; margin-bottom: 4px;">Descripción</label>
+                <textarea name="descripcion" id="edit_descripcion" rows="2" style="width: 100%; padding: 10px 12px; border: 1.5px solid #f3c6d8; border-radius: 8px; box-sizing: border-box; font-family: inherit;"></textarea>
             </div>
 
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
                 <button type="button" class="btn btn-secondary" onclick="cerrarModalEditar()">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Guardar Cambios</button>
             </div>
@@ -266,6 +339,9 @@ require __DIR__ . '/partials/head.php';
     function toggleFormNuevo() {
         const f = document.getElementById('formNuevoProducto');
         f.style.display = (f.style.display === 'none' || f.style.display === '') ? 'block' : 'none';
+        if (f.style.display === 'block') {
+            f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     function abrirModalEditar(p) {
@@ -281,6 +357,11 @@ require __DIR__ . '/partials/head.php';
     function cerrarModalEditar() {
         document.getElementById('modalEditarProducto').style.display = 'none';
     }
+
+    // Cerrar modal al hacer clic en el fondo
+    document.getElementById('modalEditarProducto')?.addEventListener('click', function(e) {
+        if (e.target === this) cerrarModalEditar();
+    });
 
     // === Lógica de Búsqueda, Filtrado, Ordenamiento y Paginación (RF 3.2) ===
     let paginaActual = 1;
@@ -336,12 +417,38 @@ require __DIR__ . '/partials/head.php';
                 const btnAnt = document.createElement('button');
                 btnAnt.type = 'button';
                 btnAnt.className = 'btn btn-sm btn-secondary';
-                btnAnt.textContent = '« Ant';
+                btnAnt.innerHTML = '<i class="fa-solid fa-chevron-left"></i> Ant';
                 btnAnt.disabled = paginaActual === 1;
                 btnAnt.onclick = () => { paginaActual--; filtrarYPaginar(); };
                 contenedorBotones.appendChild(btnAnt);
 
-                for (let p = 1; p <= totalPaginas; p++) {
+                let startP = Math.max(1, paginaActual - 2);
+                let endP = Math.min(totalPaginas, paginaActual + 2);
+                if (paginaActual <= 3) {
+                    endP = Math.min(5, totalPaginas);
+                }
+                if (paginaActual >= totalPaginas - 2) {
+                    startP = Math.max(1, totalPaginas - 4);
+                }
+
+                if (startP > 1) {
+                    const btn1 = document.createElement('button');
+                    btn1.type = 'button';
+                    btn1.className = 'btn btn-sm btn-secondary';
+                    btn1.textContent = '1';
+                    btn1.onclick = () => { paginaActual = 1; filtrarYPaginar(); };
+                    contenedorBotones.appendChild(btn1);
+
+                    if (startP > 2) {
+                        const dots = document.createElement('span');
+                        dots.textContent = '...';
+                        dots.style.padding = '0 4px';
+                        dots.style.color = '#888';
+                        contenedorBotones.appendChild(dots);
+                    }
+                }
+
+                for (let p = startP; p <= endP; p++) {
                     const btnP = document.createElement('button');
                     btnP.type = 'button';
                     btnP.className = `btn btn-sm ${p === paginaActual ? 'btn-primary' : 'btn-secondary'}`;
@@ -350,10 +457,27 @@ require __DIR__ . '/partials/head.php';
                     contenedorBotones.appendChild(btnP);
                 }
 
+                if (endP < totalPaginas) {
+                    if (endP < totalPaginas - 1) {
+                        const dots = document.createElement('span');
+                        dots.textContent = '...';
+                        dots.style.padding = '0 4px';
+                        dots.style.color = '#888';
+                        contenedorBotones.appendChild(dots);
+                    }
+
+                    const btnUlt = document.createElement('button');
+                    btnUlt.type = 'button';
+                    btnUlt.className = 'btn btn-sm btn-secondary';
+                    btnUlt.textContent = totalPaginas;
+                    btnUlt.onclick = () => { paginaActual = totalPaginas; filtrarYPaginar(); };
+                    contenedorBotones.appendChild(btnUlt);
+                }
+
                 const btnSig = document.createElement('button');
                 btnSig.type = 'button';
                 btnSig.className = 'btn btn-sm btn-secondary';
-                btnSig.textContent = 'Sig »';
+                btnSig.innerHTML = 'Sig <i class="fa-solid fa-chevron-right"></i>';
                 btnSig.disabled = paginaActual === totalPaginas;
                 btnSig.onclick = () => { paginaActual++; filtrarYPaginar(); };
                 contenedorBotones.appendChild(btnSig);

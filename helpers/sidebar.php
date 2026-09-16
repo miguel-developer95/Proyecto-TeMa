@@ -8,9 +8,16 @@ $rolActual = strtolower($_SESSION['user']['rol'] ?? '');
 $paginaActual = basename($_SERVER['PHP_SELF']);
 ?>
 
-<aside class="sidebar">
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="appSidebar">
     <div>
         <div class="sidebar-header">
+            <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Cerrar menú">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <button type="button" class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Ocultar menú para más espacio" aria-label="Ocultar menú">
+                <i class="fa-solid fa-angles-left"></i>
+            </button>
             <img src="/Proyecto-TeMa/public/logo.png" alt="Logo">
             <h3>Tentaciones Marlly</h3>
         </div>

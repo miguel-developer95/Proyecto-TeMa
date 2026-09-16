@@ -75,6 +75,23 @@ require __DIR__ . '/partials/head.php';
         margin-top: 10px;
     }
 
+    @media (max-width: 680px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .btn-container {
+            grid-column: span 1;
+            flex-direction: column;
+        }
+
+        .btn-container button,
+        .btn-container a {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
     .btn-cancel {
         background-color: #6c757d;
         color: white;
@@ -116,16 +133,23 @@ require __DIR__ . '/partials/head.php';
         cursor: pointer !important;
     }
 
-    .crud-card .action-btn i,
-    .crud-card .action-btn i.fa-solid {
-        all: revert;
-        position: static !important;
+    /* No usar "all: revert" aquí: resetea también font-family y rompe
+       el ícono de Font Awesome (queda como un cuadrito/tofu). Solo
+       normalizamos posición/tamaño y dejamos que .fa-solid siga
+       controlando la fuente y el glifo del ícono. */
+    .crud-card .action-btn i {
         display: inline-block !important;
         flex-shrink: 0 !important;
+        position: static !important;
         margin: 0 !important;
         padding: 0 !important;
         font-size: 13px !important;
         line-height: 1 !important;
+        font-style: normal !important;
+        font-variant: normal !important;
+        text-rendering: auto !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
     }
 
     .crud-card .btn-activate { background: #e8f5e9 !important; color: #2e7d32 !important; }
@@ -253,52 +277,54 @@ require __DIR__ . '/partials/head.php';
         <!-- Tabla de Usuarios -->
         <div class="crud-card">
             <h3>Lista de Usuarios Registrados</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre de Usuario</th>
-                        <th>Correo</th>
-                        <th>No. Documento</th>
-                        <th>Rol</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($usuarios as $u): ?>
+            <div class="table-responsive">
+                <table>
+                    <thead>
                         <tr>
-                            <td>#<?php echo $u['id']; ?></td>
-                            <td><strong><?php echo htmlspecialchars($u['username']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($u['email'] ?? $u['correo_electronico'] ?? 'Sin correo'); ?></td>
-                            <td><?php echo htmlspecialchars($u['documento'] ?? $u['No.Documento'] ?? 'N/A'); ?></td>
-                            <td><?php echo htmlspecialchars($u['rol'] ?? 'N/A'); ?></td>
-                            <td>
-                                <?php if (($u['estado'] ?? '') === 'activo'): ?>
-                                    <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
-                                    onclick="return confirm('¿Desactivar a este usuario? No podrá iniciar sesión mientras esté inactivo.');"
-                                    class="action-btn btn-deactivate">
-                                        <i class="fa-solid fa-user-slash"></i> Desactivar
-                                    </a>
-                                <?php else: ?>
-                                    <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
-                                    onclick="return confirm('¿Activar a este usuario? Podrá volver a iniciar sesión.');"
-                                    class="action-btn btn-activate">
-                                        <i class="fa-solid fa-user-check"></i> Activar
-                                    </a>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? $u['No.Documento'] ?? ''); ?>&edit_rol=<?php echo urlencode($u['rol'] ?? ''); ?>" class="action-btn btn-edit">
-                                    <i class="fa-solid fa-pen"></i> Editar
-                                </a>
-                                <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas desactivar (eliminación lógica) a este usuario?');" class="action-btn btn-delete">
-                                    <i class="fa-solid fa-trash"></i> Eliminar
-                                </a>
-                            </td>
+                            <th>ID</th>
+                            <th>Nombre de Usuario</th>
+                            <th>Correo</th>
+                            <th>No. Documento</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($usuarios as $u): ?>
+                            <tr>
+                                <td>#<?php echo $u['id']; ?></td>
+                                <td><strong><?php echo htmlspecialchars($u['username']); ?></strong></td>
+                                <td><?php echo htmlspecialchars($u['email'] ?? $u['correo_electronico'] ?? 'Sin correo'); ?></td>
+                                <td><?php echo htmlspecialchars($u['documento'] ?? $u['No.Documento'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($u['rol'] ?? 'N/A'); ?></td>
+                                <td>
+                                    <?php if (($u['estado'] ?? '') === 'activo'): ?>
+                                        <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
+                                        onclick="return confirm('¿Desactivar a este usuario? No podrá iniciar sesión mientras esté inactivo.');"
+                                        class="action-btn btn-deactivate">
+                                            <i class="fa-solid fa-user-slash"></i> Desactivar
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
+                                        onclick="return confirm('¿Activar a este usuario? Podrá volver a iniciar sesión.');"
+                                        class="action-btn btn-activate">
+                                            <i class="fa-solid fa-user-check"></i> Activar
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? $u['No.Documento'] ?? ''); ?>&edit_rol=<?php echo urlencode($u['rol'] ?? ''); ?>" class="action-btn btn-edit">
+                                        <i class="fa-solid fa-pen"></i> Editar
+                                    </a>
+                                    <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas desactivar (eliminación lógica) a este usuario?');" class="action-btn btn-delete">
+                                        <i class="fa-solid fa-trash"></i> Eliminar
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
 <?php require __DIR__ . '/partials/foot.php'; ?>

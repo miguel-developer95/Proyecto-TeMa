@@ -128,7 +128,7 @@ elseif ($action === 'pos_pausada_delete') {
     require_once __DIR__ . '/controller/VentaController.php';
     (new VentaController())->posPausadaDelete();
 }
-elseif ($action === 'pos_checkout') {
+elseif ($action === 'pos_checkout' || $action === 'checkout') {
     require_once __DIR__ . '/controller/VentaController.php';
     (new VentaController())->checkout();
 }

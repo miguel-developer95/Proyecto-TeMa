@@ -299,6 +299,41 @@ require __DIR__ . '/partials/head.php';
         padding: 13px 15px;
         border-bottom: 1px solid #f9e8f0;
         color: #333333;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 600px) {
+        .item-compra-row {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .item-compra-row .item-field {
+            flex: 1 1 100% !important;
+            width: 100%;
+        }
+
+        .item-compra-row .item-action {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 4px;
+        }
+
+        .item-compra-row .btn-remove-row {
+            width: 100%;
+        }
+
+        .compra-actions-bar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .compra-actions-bar button,
+        .compra-actions-bar div {
+            width: 100%;
+            text-align: center;
+        }
     }
 
     table.tabla-compras tbody tr:hover {
@@ -331,19 +366,32 @@ require __DIR__ . '/partials/head.php';
         color: #f57f17;
     }
 
-    .btn-action-edit {
-        background: #e0f2fe;
-        color: #0369a1;
-        border: 1px solid #bae6fd;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 12.5px;
+    .acciones-compra {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .btn-action-edit,
+    .btn-action-cancel {
+        padding: 5px 9px;
+        border-radius: 7px;
+        font-size: 11px;
         font-weight: 600;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
+        line-height: 1;
+        white-space: nowrap;
         transition: all 0.2s;
+    }
+
+    .btn-action-edit {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
     }
 
     .btn-action-edit:hover {
@@ -355,15 +403,6 @@ require __DIR__ . '/partials/head.php';
         background: #fef2f2;
         color: #b91c1c;
         border: 1px solid #fecaca;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 12.5px;
-        font-weight: 600;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        transition: all 0.2s;
     }
 
     .btn-action-cancel:hover {
@@ -625,17 +664,19 @@ require __DIR__ . '/partials/head.php';
                                     </td>
                                     <td style="text-align: center; white-space: nowrap;">
                                         <?php if (strtolower($c['estado']) !== 'anulada'): ?>
-                                            <button type="button" class="btn-action-edit" onclick="abrirModalEditar(<?php echo htmlspecialchars(json_encode($c)); ?>)">
-                                                <i class="fa-solid fa-pen-to-square"></i> Editar
-                                            </button>
-                                            <form method="POST" style="display:inline;" onsubmit="return confirm('¿Está seguro de anular esta compra? Se revertirá el stock ingresado.');">
-                                                <?= csrf_field() ?>
-                                                <input type="hidden" name="accion" value="anular_compra">
-                                                <input type="hidden" name="id_compra" value="<?php echo $c['id_compra']; ?>">
-                                                <button type="submit" class="btn-action-cancel">
-                                                    <i class="fa-solid fa-xmark"></i> Anular
+                                            <div class="acciones-compra">
+                                                <button type="button" class="btn-action-edit" onclick="abrirModalEditar(<?php echo htmlspecialchars(json_encode($c)); ?>)" title="Editar">
+                                                    <i class="fa-solid fa-pen-to-square"></i> Editar
                                                 </button>
-                                            </form>
+                                                <form method="POST" style="display:inline;" onsubmit="return confirm('¿Está seguro de anular esta compra? Se revertirá el stock ingresado.');">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="accion" value="anular_compra">
+                                                    <input type="hidden" name="id_compra" value="<?php echo $c['id_compra']; ?>">
+                                                    <button type="submit" class="btn-action-cancel" title="Anular">
+                                                        <i class="fa-solid fa-xmark"></i> Anular
+                                                    </button>
+                                                </form>
+                                            </div>
                                         <?php else: ?>
                                             <span style="color: #aaa; font-size: 12px; font-style: italic;">Sin acciones</span>
                                         <?php endif; ?>

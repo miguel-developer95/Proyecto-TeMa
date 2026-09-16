@@ -165,6 +165,37 @@ require __DIR__ . '/partials/head.php';
         transform: translateY(-2px);
     }
 
+    @media (max-width: 640px) {
+        .filter-presets {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 10px;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .filter-bar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-inputs {
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+        }
+
+        .filter-inputs input[type="date"] {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .filter-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
     /* Gráficas Grid */
     .charts-grid {
         display: grid;
@@ -187,6 +218,8 @@ require __DIR__ . '/partials/head.php';
         border: 1px solid #fce4ec;
         display: flex;
         flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
         transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
 
@@ -226,8 +259,50 @@ require __DIR__ . '/partials/head.php';
     .chart-canvas-container {
         position: relative;
         width: 100%;
+        min-width: 0;
         flex: 1;
-        min-height: 240px;
+        height: 260px;
+    }
+
+    .chart-canvas-container.chart-tall {
+        height: 290px;
+    }
+
+    @media (max-width: 768px) {
+        .chart-card {
+            padding: 16px 14px;
+            border-radius: 16px;
+        }
+
+        .chart-header {
+            margin-bottom: 12px;
+        }
+
+        .chart-title {
+            font-size: 15px;
+        }
+
+        .chart-subtitle {
+            font-size: 11.5px;
+        }
+
+        .chart-canvas-container {
+            height: 240px;
+        }
+
+        .chart-canvas-container.chart-tall {
+            height: 250px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .chart-canvas-container {
+            height: 230px;
+        }
+
+        .chart-canvas-container.chart-tall {
+            height: 235px;
+        }
     }
 
     /* Pestañas de informes */
@@ -279,12 +354,14 @@ require __DIR__ . '/partials/head.php';
         color: #2b3a55;
         font-weight: 700;
         border-bottom: 2px solid #f3c6d8;
+        white-space: nowrap;
     }
 
     .tabla-reporte td {
         padding: 12px 14px;
         border-bottom: 1px solid #f5e3ec;
         color: #333333;
+        white-space: nowrap;
     }
 
     .tabla-reporte tr:hover {
@@ -548,7 +625,7 @@ require __DIR__ . '/partials/head.php';
                             $ <?= number_format($metricas['ingresos_periodo'], 0, ',', '.') ?>
                         </div>
                     </div>
-                    <div class="chart-canvas-container" style="height: 280px;">
+                    <div class="chart-canvas-container chart-tall">
                         <canvas id="chartTendenciaVentas"></canvas>
                     </div>
                 </div>
@@ -561,7 +638,7 @@ require __DIR__ . '/partials/head.php';
                             <p class="chart-subtitle">Ingresos Totales vs. Costo de Mercancía vs. Ganancia Real</p>
                         </div>
                     </div>
-                    <div class="chart-canvas-container" style="height: 250px;">
+                    <div class="chart-canvas-container">
                         <canvas id="chartFinanciero"></canvas>
                     </div>
                 </div>
@@ -574,7 +651,7 @@ require __DIR__ . '/partials/head.php';
                             <p class="chart-subtitle">Participación de ingresos según línea de producto</p>
                         </div>
                     </div>
-                    <div class="chart-canvas-container" style="height: 250px;">
+                    <div class="chart-canvas-container">
                         <canvas id="chartCategorias"></canvas>
                     </div>
                 </div>
@@ -587,7 +664,7 @@ require __DIR__ . '/partials/head.php';
                             <p class="chart-subtitle">Productos de mayor rotación (unidades vendidas)</p>
                         </div>
                     </div>
-                    <div class="chart-canvas-container" style="height: 250px;">
+                    <div class="chart-canvas-container">
                         <canvas id="chartTopProductos"></canvas>
                     </div>
                 </div>
@@ -600,7 +677,7 @@ require __DIR__ . '/partials/head.php';
                             <p class="chart-subtitle">Distribución entre Efectivo y Transferencias Digitales</p>
                         </div>
                     </div>
-                    <div class="chart-canvas-container" style="height: 250px;">
+                    <div class="chart-canvas-container">
                         <canvas id="chartMetodosPago"></canvas>
                     </div>
                 </div>
@@ -853,6 +930,8 @@ require __DIR__ . '/partials/head.php';
             '#f06292'  // Rosa pastel
         ];
 
+        window.dashboardCharts = [];
+
         // 1. Gráfica de Tendencia de Ventas
         const datosTendencia = <?= json_encode($tendencia, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
         const ctxTendencia = document.getElementById('chartTendenciaVentas');
@@ -862,7 +941,7 @@ require __DIR__ . '/partials/head.php';
             gradient.addColorStop(0, 'rgba(230, 60, 130, 0.35)');
             gradient.addColorStop(1, 'rgba(230, 60, 130, 0.00)');
 
-            new Chart(ctxTendencia, {
+            const chart1 = new Chart(ctxTendencia, {
                 type: 'line',
                 data: {
                     labels: datosTendencia.labels || [],
@@ -905,23 +984,30 @@ require __DIR__ . '/partials/head.php';
                             beginAtZero: true,
                             ticks: {
                                 callback: (v) => fmtMoney(v),
-                                font: { size: 11 }
+                                font: { size: 11 },
+                                maxTicksLimit: 6
                             },
                             grid: { color: 'rgba(230, 60, 130, 0.07)' }
                         },
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 11 } }
+                            ticks: {
+                                font: { size: 11 },
+                                maxTicksLimit: (window.innerWidth < 640 ? 6 : 14),
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
                         }
                     }
                 }
             });
+            window.dashboardCharts.push(chart1);
         }
 
         // 2. Gráfica de Balance Financiero
         const ctxFinanciero = document.getElementById('chartFinanciero');
         if (ctxFinanciero && typeof Chart !== 'undefined') {
-            new Chart(ctxFinanciero, {
+            const chart2 = new Chart(ctxFinanciero, {
                 type: 'bar',
                 data: {
                     labels: ['Ingresos Totales', 'Costo Mercancía', 'Ganancia Neta'],
@@ -956,24 +1042,37 @@ require __DIR__ . '/partials/head.php';
                             beginAtZero: true,
                             ticks: {
                                 callback: (v) => fmtMoney(v),
-                                font: { size: 11 }
+                                font: { size: 11 },
+                                maxTicksLimit: 6
                             },
                             grid: { color: 'rgba(0,0,0,0.05)' }
                         },
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 11.5, weight: '600' } }
+                            ticks: {
+                                font: { size: window.innerWidth < 480 ? 10 : 11.5, weight: '600' },
+                                callback: function(val) {
+                                    const lbl = this.getLabelForValue(val) || '';
+                                    if (window.innerWidth < 520) {
+                                        if (lbl.indexOf('Ingresos') !== -1) return 'Ingresos';
+                                        if (lbl.indexOf('Costo') !== -1) return 'Costos';
+                                        if (lbl.indexOf('Ganancia') !== -1) return 'Ganancia';
+                                    }
+                                    return lbl;
+                                }
+                            }
                         }
                     }
                 }
             });
+            window.dashboardCharts.push(chart2);
         }
 
         // 3. Gráfica de Ventas por Categoría
         const datosCategorias = <?= json_encode($distribucionCategorias, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
         const ctxCategorias = document.getElementById('chartCategorias');
         if (ctxCategorias && typeof Chart !== 'undefined') {
-            new Chart(ctxCategorias, {
+            const chart3 = new Chart(ctxCategorias, {
                 type: 'doughnut',
                 data: {
                     labels: (datosCategorias.labels && datosCategorias.labels.length) ? datosCategorias.labels : ['Sin ventas'],
@@ -992,9 +1091,9 @@ require __DIR__ . '/partials/head.php';
                         legend: {
                             position: 'bottom',
                             labels: {
-                                boxWidth: 12,
-                                padding: 12,
-                                font: { size: 11 }
+                                boxWidth: window.innerWidth < 480 ? 9 : 12,
+                                padding: window.innerWidth < 480 ? 8 : 12,
+                                font: { size: window.innerWidth < 480 ? 10 : 11 }
                             }
                         },
                         tooltip: {
@@ -1010,6 +1109,7 @@ require __DIR__ . '/partials/head.php';
                     }
                 }
             });
+            window.dashboardCharts.push(chart3);
         }
 
         // 4. Gráfica de Top 5 Productos Más Vendidos
@@ -1021,7 +1121,7 @@ require __DIR__ . '/partials/head.php';
 
         const ctxTop = document.getElementById('chartTopProductos');
         if (ctxTop && typeof Chart !== 'undefined') {
-            new Chart(ctxTop, {
+            const chart4 = new Chart(ctxTop, {
                 type: 'bar',
                 data: {
                     labels: (topProds.labels && topProds.labels.length) ? topProds.labels : ['Sin datos'],
@@ -1054,23 +1154,31 @@ require __DIR__ . '/partials/head.php';
                     scales: {
                         x: {
                             beginAtZero: true,
-                            ticks: { stepSize: 1, font: { size: 11 } },
+                            ticks: { stepSize: 1, font: { size: 11 }, maxTicksLimit: 6 },
                             grid: { color: 'rgba(230, 60, 130, 0.06)' }
                         },
                         y: {
                             grid: { display: false },
-                            ticks: { font: { size: 11 } }
+                            ticks: {
+                                font: { size: window.innerWidth < 480 ? 10 : 11 },
+                                callback: function(val) {
+                                    const raw = this.getLabelForValue(val) || '';
+                                    const limit = window.innerWidth < 480 ? 12 : 22;
+                                    return raw.length > limit ? raw.slice(0, limit - 1) + '…' : raw;
+                                }
+                            }
                         }
                     }
                 }
             });
+            window.dashboardCharts.push(chart4);
         }
 
         // 5. Gráfica de Métodos de Pago
         const datosMetodos = <?= json_encode($metodosPago, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
         const ctxMetodos = document.getElementById('chartMetodosPago');
         if (ctxMetodos && typeof Chart !== 'undefined') {
-            new Chart(ctxMetodos, {
+            const chart5 = new Chart(ctxMetodos, {
                 type: 'pie',
                 data: {
                     labels: (datosMetodos.labels && datosMetodos.labels.length) ? datosMetodos.labels : ['Sin pagos'],
@@ -1094,9 +1202,9 @@ require __DIR__ . '/partials/head.php';
                         legend: {
                             position: 'bottom',
                             labels: {
-                                boxWidth: 12,
-                                padding: 12,
-                                font: { size: 11 }
+                                boxWidth: window.innerWidth < 480 ? 9 : 12,
+                                padding: window.innerWidth < 480 ? 8 : 12,
+                                font: { size: window.innerWidth < 480 ? 10 : 11 }
                             }
                         },
                         tooltip: {
@@ -1115,7 +1223,21 @@ require __DIR__ . '/partials/head.php';
                     }
                 }
             });
+            window.dashboardCharts.push(chart5);
         }
+
+        // Redimensionamiento inteligente ante cambio de tamaño de ventana o alternancia de sidebar
+        function redimensionarGraficas() {
+            if (window.dashboardCharts && window.dashboardCharts.length) {
+                window.dashboardCharts.forEach(function(c) {
+                    if (c && typeof c.resize === 'function') {
+                        c.resize();
+                    }
+                });
+            }
+        }
+        window.addEventListener('resize', redimensionarGraficas);
+        window.addEventListener('sidebarToggle', redimensionarGraficas);
     });
 </script>
 

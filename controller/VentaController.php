@@ -239,6 +239,7 @@ class VentaController
             redirect('view/pos.php');
         }
 
+        $pagado = strtolower(trim((string) post('pagado'))) === 'no' ? 'no' : 'si';
         $valorRecibido = (float) post('valor_recibido');
         $idCliente = !empty($_SESSION['pos_cliente']) ? (int) $_SESSION['pos_cliente'] : null;
         $empresa = strtolower((string) $metodo['nombre_metodo']) === 'efectivo'
@@ -261,7 +262,7 @@ class VentaController
 
         $idVenta = $this->ventas->crear(
             $items, $idMetodo, $valorRecibido,
-            (int) (current_user()['id'] ?? 0), $idCliente, $empresa
+            (int) (current_user()['id'] ?? 0), $idCliente, $empresa, $pagado
         );
 
         if ($idVenta > 0) {

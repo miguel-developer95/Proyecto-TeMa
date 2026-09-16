@@ -51,6 +51,15 @@ $inicial = strtoupper(substr($primerNombre, 0, 1));
     <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/tablas.css">
     <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/pos.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        (function() {
+            try {
+                if (localStorage.getItem('sidebar_collapsed') === 'true' && window.innerWidth >= 992) {
+                    document.documentElement.classList.add('sidebar-is-collapsed');
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 
 <body>
@@ -59,11 +68,16 @@ $inicial = strtoupper(substr($primerNombre, 0, 1));
     <main class="main-content">
         <!-- Barra Superior Unificada en todas las vistas -->
         <header class="top-navbar">
-            <div>
-                <h2><?= htmlspecialchars($titulo ?? 'Tentaciones Marlly') ?></h2>
-                <?php if (!empty($subtitulo)): ?>
-                    <p class="top-navbar-subtitle"><?= htmlspecialchars($subtitulo) ?></p>
-                <?php endif; ?>
+            <div class="top-navbar-left">
+                <button type="button" class="sidebar-toggle-btn" id="sidebarToggle" title="Ocultar / Mostrar menú lateral" aria-label="Ocultar o mostrar menú">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <h2><?= htmlspecialchars($titulo ?? 'Tentaciones Marlly') ?></h2>
+                    <?php if (!empty($subtitulo)): ?>
+                        <p class="top-navbar-subtitle"><?= htmlspecialchars($subtitulo) ?></p>
+                    <?php endif; ?>
+                </div>
             </div>
             <div class="user-profile">
                 <div class="user-avatar" title="<?= htmlspecialchars($nombreMostrar) ?>">
