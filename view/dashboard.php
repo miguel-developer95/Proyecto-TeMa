@@ -709,19 +709,19 @@ require __DIR__ . '/partials/head.php';
             <div class="reportes-tabs">
                 <a href="?tipo_informe=ganancia_producto&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>"
                    class="report-tab-btn <?= $tipoInforme === 'ganancia_producto' ? 'active' : '' ?>">
-                    <i class="fa-solid fa-coins"></i> Ganancia Real por Producto (RF 2.1)
+                    <i class="fa-solid fa-coins"></i> Ganancia Real por Producto
                 </a>
                 <a href="?tipo_informe=ganancia_categoria&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>"
                    class="report-tab-btn <?= $tipoInforme === 'ganancia_categoria' ? 'active' : '' ?>">
-                    <i class="fa-solid fa-layer-group"></i> Ganancia Real por Categoría (RF 2.1)
+                    <i class="fa-solid fa-layer-group"></i> Ganancia Real por Categoría
                 </a>
                 <a href="?tipo_informe=rotacion_alta&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>"
                    class="report-tab-btn <?= $tipoInforme === 'rotacion_alta' ? 'active' : '' ?>">
-                    <i class="fa-solid fa-fire"></i> Mayor Rotación / Top Ventas (RF 2.2)
+                    <i class="fa-solid fa-fire"></i> Mayor Rotación / Top Ventas
                 </a>
                 <a href="?tipo_informe=rotacion_baja&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>"
                    class="report-tab-btn <?= $tipoInforme === 'rotacion_baja' ? 'active' : '' ?>">
-                    <i class="fa-solid fa-box-archive"></i> Baja Rotación / Sin Movimiento (RF 2.2)
+                    <i class="fa-solid fa-box-archive"></i> Baja Rotación / Sin Movimiento
                 </a>
             </div>
 

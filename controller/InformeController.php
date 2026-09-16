@@ -5,6 +5,22 @@ require_once __DIR__ . '/../helpers/auth_guard.php';
 require_once __DIR__ . '/../model/informes.php';
 require_once __DIR__ . '/../libs/fpdf.php';
 
+if (!function_exists('pdf_texto')) {
+    function pdf_texto(?string $str): string
+    {
+        if ($str === null || $str === '') {
+            return '';
+        }
+        if (function_exists('mb_convert_encoding')) {
+            return mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+        }
+        if (function_exists('iconv')) {
+            return (string) @iconv('UTF-8', 'windows-1252//TRANSLIT', $str);
+        }
+        return $str;
+    }
+}
+
 class PDFReporte extends FPDF
 {
     private string $tituloInforme = '';
@@ -26,22 +42,22 @@ class PDFReporte extends FPDF
         $this->SetX(38);
         $this->SetFont('Arial', 'B', 15);
         $this->SetTextColor(230, 60, 130);
-        $this->Cell(0, 7, utf8_decode('TENTACIONES MARLLY'), 0, 1);
+        $this->Cell(0, 7, pdf_texto('TENTACIONES MARLLY'), 0, 1);
 
         $this->SetX(38);
         $this->SetFont('Arial', '', 9);
         $this->SetTextColor(100, 100, 100);
-        $this->Cell(0, 5, utf8_decode('Mini Tienda de Consumo Diario - Sistema de Gestión TeMa'), 0, 1);
+        $this->Cell(0, 5, pdf_texto('Mini Tienda de Consumo Diario - Sistema de Gestión TeMa'), 0, 1);
 
         $this->SetX(38);
         $this->SetFont('Arial', 'B', 11);
         $this->SetTextColor(43, 58, 85);
-        $this->Cell(0, 6, utf8_decode($this->tituloInforme), 0, 1);
+        $this->Cell(0, 6, pdf_texto($this->tituloInforme), 0, 1);
 
         $this->SetX(38);
         $this->SetFont('Arial', 'I', 9);
         $this->SetTextColor(120, 120, 120);
-        $this->Cell(0, 5, utf8_decode('Período: ' . $this->rangoFechas . ' | Generado: ' . date('Y-m-d H:i:s')), 0, 1);
+        $this->Cell(0, 5, pdf_texto('Período: ' . $this->rangoFechas . ' | Generado: ' . date('Y-m-d H:i:s')), 0, 1);
 
         $this->Ln(4);
         $this->SetDrawColor(243, 198, 216);
@@ -57,8 +73,8 @@ class PDFReporte extends FPDF
         $this->Line(15, $this->GetY(), 195, $this->GetY());
         $this->SetFont('Arial', 'I', 8);
         $this->SetTextColor(140, 140, 140);
-        $this->Cell(90, 10, utf8_decode('Tentaciones Marlly © ' . date('Y')), 0, 0, 'L');
-        $this->Cell(90, 10, utf8_decode('Página ') . $this->PageNo() . ' / {nb}', 0, 0, 'R');
+        $this->Cell(90, 10, pdf_texto('Tentaciones Marlly © ' . date('Y')), 0, 0, 'L');
+        $this->Cell(90, 10, pdf_texto('Página ') . $this->PageNo() . ' / {nb}', 0, 0, 'R');
     }
 }
 
@@ -77,23 +93,23 @@ class InformeController
         switch ($tipo) {
             case 'ganancia_categoria':
                 return [
-                    'titulo' => 'Informe de Ganancia Real por Categoría (RF 2.1)',
+                    'titulo' => 'Informe de Ganancia Real por Categoría',
                     'datos'  => $this->informesModel->gananciaPorCategoria($inicio, $fin),
                 ];
             case 'rotacion_alta':
                 return [
-                    'titulo' => 'Informe de Mayor Rotación / Top Ventas (RF 2.2)',
+                    'titulo' => 'Informe de Mayor Rotación / Top Ventas',
                     'datos'  => $this->informesModel->productosMasVendidos($inicio, $fin, 50),
                 ];
             case 'rotacion_baja':
                 return [
-                    'titulo' => 'Informe de Baja Rotación / Sin Movimiento (RF 2.2)',
+                    'titulo' => 'Informe de Baja Rotación / Sin Movimiento',
                     'datos'  => $this->informesModel->productosBajaRotacion($inicio, $fin),
                 ];
             case 'ganancia_producto':
             default:
                 return [
-                    'titulo' => 'Informe de Ganancia Real por Producto (RF 2.1)',
+                    'titulo' => 'Informe de Ganancia Real por Producto',
                     'datos'  => $this->informesModel->gananciaPorProducto($inicio, $fin),
                 ];
         }
@@ -184,13 +200,13 @@ class InformeController
             $pdf->SetFont('Arial', 'B', 8);
             $pdf->SetFillColor(245, 227, 236);
             $pdf->SetTextColor(43, 58, 85);
-            $pdf->Cell(25, 7, utf8_decode('Código'), 1, 0, 'C', true);
-            $pdf->Cell(45, 7, utf8_decode('Producto'), 1, 0, 'L', true);
-            $pdf->Cell(30, 7, utf8_decode('Categoría'), 1, 0, 'L', true);
-            $pdf->Cell(18, 7, utf8_decode('Vendidos'), 1, 0, 'C', true);
-            $pdf->Cell(22, 7, utf8_decode('Ingresos'), 1, 0, 'R', true);
-            $pdf->Cell(20, 7, utf8_decode('Costo'), 1, 0, 'R', true);
-            $pdf->Cell(20, 7, utf8_decode('Ganancia'), 1, 1, 'R', true);
+            $pdf->Cell(25, 7, pdf_texto('Código'), 1, 0, 'C', true);
+            $pdf->Cell(45, 7, pdf_texto('Producto'), 1, 0, 'L', true);
+            $pdf->Cell(30, 7, pdf_texto('Categoría'), 1, 0, 'L', true);
+            $pdf->Cell(18, 7, pdf_texto('Vendidos'), 1, 0, 'C', true);
+            $pdf->Cell(22, 7, pdf_texto('Ingresos'), 1, 0, 'R', true);
+            $pdf->Cell(20, 7, pdf_texto('Costo'), 1, 0, 'R', true);
+            $pdf->Cell(20, 7, pdf_texto('Ganancia'), 1, 1, 'R', true);
 
             $pdf->SetFont('Arial', '', 7.5);
             $pdf->SetTextColor(50, 50, 50);
@@ -201,9 +217,9 @@ class InformeController
                 $totCos += (float)($f['total_costo'] ?? 0);
                 $totGan += (float)($f['ganancia_real'] ?? 0);
 
-                $pdf->Cell(25, 6, utf8_decode(substr($f['codigo_barras'] ?? '—', 0, 15)), 1, 0, 'C');
-                $pdf->Cell(45, 6, utf8_decode(substr($f['nombre'] ?? '', 0, 26)), 1, 0, 'L');
-                $pdf->Cell(30, 6, utf8_decode(substr($f['categoria'] ?? 'Sin cat.', 0, 18)), 1, 0, 'L');
+                $pdf->Cell(25, 6, pdf_texto(substr($f['codigo_barras'] ?? '—', 0, 15)), 1, 0, 'C');
+                $pdf->Cell(45, 6, pdf_texto(substr($f['nombre'] ?? '', 0, 26)), 1, 0, 'L');
+                $pdf->Cell(30, 6, pdf_texto(substr($f['categoria'] ?? 'Sin cat.', 0, 18)), 1, 0, 'L');
                 $pdf->Cell(18, 6, $f['cantidad_vendida'] ?? 0, 1, 0, 'C');
                 $pdf->Cell(22, 6, '$' . number_format((float)($f['total_ingresos'] ?? 0), 2), 1, 0, 'R');
                 $pdf->Cell(20, 6, '$' . number_format((float)($f['total_costo'] ?? 0), 2), 1, 0, 'R');
@@ -216,7 +232,7 @@ class InformeController
 
             $pdf->SetFont('Arial', 'B', 8);
             $pdf->SetFillColor(253, 242, 247);
-            $pdf->Cell(118, 7, utf8_decode('TOTALES:'), 1, 0, 'R', true);
+            $pdf->Cell(118, 7, pdf_texto('TOTALES:'), 1, 0, 'R', true);
             $pdf->Cell(22, 7, '$' . number_format($totIng, 2), 1, 0, 'R', true);
             $pdf->Cell(20, 7, '$' . number_format($totCos, 2), 1, 0, 'R', true);
             $pdf->SetTextColor(46, 125, 50);
@@ -226,12 +242,12 @@ class InformeController
             $pdf->SetFont('Arial', 'B', 8.5);
             $pdf->SetFillColor(245, 227, 236);
             $pdf->SetTextColor(43, 58, 85);
-            $pdf->Cell(45, 7, utf8_decode('Categoría'), 1, 0, 'L', true);
-            $pdf->Cell(25, 7, utf8_decode('Variedad Prod.'), 1, 0, 'C', true);
-            $pdf->Cell(25, 7, utf8_decode('Unid. Vendidas'), 1, 0, 'C', true);
-            $pdf->Cell(28, 7, utf8_decode('Ingresos ($)'), 1, 0, 'R', true);
-            $pdf->Cell(28, 7, utf8_decode('Costo ($)'), 1, 0, 'R', true);
-            $pdf->Cell(29, 7, utf8_decode('Ganancia Real ($)'), 1, 1, 'R', true);
+            $pdf->Cell(45, 7, pdf_texto('Categoría'), 1, 0, 'L', true);
+            $pdf->Cell(25, 7, pdf_texto('Variedad Prod.'), 1, 0, 'C', true);
+            $pdf->Cell(25, 7, pdf_texto('Unid. Vendidas'), 1, 0, 'C', true);
+            $pdf->Cell(28, 7, pdf_texto('Ingresos ($)'), 1, 0, 'R', true);
+            $pdf->Cell(28, 7, pdf_texto('Costo ($)'), 1, 0, 'R', true);
+            $pdf->Cell(29, 7, pdf_texto('Ganancia Real ($)'), 1, 1, 'R', true);
 
             $pdf->SetFont('Arial', '', 8);
             $pdf->SetTextColor(50, 50, 50);
@@ -242,7 +258,7 @@ class InformeController
                 $totCos += (float)($f['total_costo'] ?? 0);
                 $totGan += (float)($f['ganancia_real'] ?? 0);
 
-                $pdf->Cell(45, 6, utf8_decode(substr($f['categoria'] ?? '', 0, 25)), 1, 0, 'L');
+                $pdf->Cell(45, 6, pdf_texto(substr($f['categoria'] ?? '', 0, 25)), 1, 0, 'L');
                 $pdf->Cell(25, 6, $f['productos_distintos'] ?? 0, 1, 0, 'C');
                 $pdf->Cell(25, 6, $f['cantidad_vendida'] ?? 0, 1, 0, 'C');
                 $pdf->Cell(28, 6, '$' . number_format((float)($f['total_ingresos'] ?? 0), 2), 1, 0, 'R');
@@ -256,7 +272,7 @@ class InformeController
 
             $pdf->SetFont('Arial', 'B', 8.5);
             $pdf->SetFillColor(253, 242, 247);
-            $pdf->Cell(95, 7, utf8_decode('TOTALES:'), 1, 0, 'R', true);
+            $pdf->Cell(95, 7, pdf_texto('TOTALES:'), 1, 0, 'R', true);
             $pdf->Cell(28, 7, '$' . number_format($totIng, 2), 1, 0, 'R', true);
             $pdf->Cell(28, 7, '$' . number_format($totCos, 2), 1, 0, 'R', true);
             $pdf->SetTextColor(46, 125, 50);
@@ -266,21 +282,21 @@ class InformeController
             $pdf->SetFont('Arial', 'B', 8.5);
             $pdf->SetFillColor(245, 227, 236);
             $pdf->SetTextColor(43, 58, 85);
-            $pdf->Cell(20, 7, utf8_decode('Ranking'), 1, 0, 'C', true);
-            $pdf->Cell(30, 7, utf8_decode('Código'), 1, 0, 'C', true);
-            $pdf->Cell(50, 7, utf8_decode('Producto'), 1, 0, 'L', true);
-            $pdf->Cell(30, 7, utf8_decode('Categoría'), 1, 0, 'L', true);
-            $pdf->Cell(20, 7, utf8_decode('Stock'), 1, 0, 'C', true);
-            $pdf->Cell(30, 7, utf8_decode('Total Recaudado'), 1, 1, 'R', true);
+            $pdf->Cell(20, 7, pdf_texto('Ranking'), 1, 0, 'C', true);
+            $pdf->Cell(30, 7, pdf_texto('Código'), 1, 0, 'C', true);
+            $pdf->Cell(50, 7, pdf_texto('Producto'), 1, 0, 'L', true);
+            $pdf->Cell(30, 7, pdf_texto('Categoría'), 1, 0, 'L', true);
+            $pdf->Cell(20, 7, pdf_texto('Stock'), 1, 0, 'C', true);
+            $pdf->Cell(30, 7, pdf_texto('Total Recaudado'), 1, 1, 'R', true);
 
             $pdf->SetFont('Arial', '', 8);
             $pdf->SetTextColor(50, 50, 50);
 
             foreach ($datos as $i => $f) {
-                $pdf->Cell(20, 6, utf8_decode('Top ' . ($i + 1)), 1, 0, 'C');
-                $pdf->Cell(30, 6, utf8_decode($f['codigo_barras'] ?? '—'), 1, 0, 'C');
-                $pdf->Cell(50, 6, utf8_decode(substr($f['nombre'] ?? '', 0, 30)), 1, 0, 'L');
-                $pdf->Cell(30, 6, utf8_decode(substr($f['categoria'] ?? 'Sin cat.', 0, 18)), 1, 0, 'L');
+                $pdf->Cell(20, 6, pdf_texto('Top ' . ($i + 1)), 1, 0, 'C');
+                $pdf->Cell(30, 6, pdf_texto($f['codigo_barras'] ?? '—'), 1, 0, 'C');
+                $pdf->Cell(50, 6, pdf_texto(substr($f['nombre'] ?? '', 0, 30)), 1, 0, 'L');
+                $pdf->Cell(30, 6, pdf_texto(substr($f['categoria'] ?? 'Sin cat.', 0, 18)), 1, 0, 'L');
                 $pdf->Cell(20, 6, $f['cantidad_stock'] ?? 0, 1, 0, 'C');
                 $pdf->Cell(30, 6, '$' . number_format((float)($f['total_recaudado'] ?? 0), 2), 1, 1, 'R');
             }
@@ -288,25 +304,28 @@ class InformeController
             $pdf->SetFont('Arial', 'B', 8.5);
             $pdf->SetFillColor(245, 227, 236);
             $pdf->SetTextColor(43, 58, 85);
-            $pdf->Cell(30, 7, utf8_decode('Código'), 1, 0, 'C', true);
-            $pdf->Cell(60, 7, utf8_decode('Producto'), 1, 0, 'L', true);
-            $pdf->Cell(35, 7, utf8_decode('Categoría'), 1, 0, 'L', true);
-            $pdf->Cell(25, 7, utf8_decode('Precio Venta'), 1, 0, 'R', true);
-            $pdf->Cell(30, 7, utf8_decode('Stock Estancado'), 1, 1, 'C', true);
+            $pdf->Cell(30, 7, pdf_texto('Código'), 1, 0, 'C', true);
+            $pdf->Cell(60, 7, pdf_texto('Producto'), 1, 0, 'L', true);
+            $pdf->Cell(35, 7, pdf_texto('Categoría'), 1, 0, 'L', true);
+            $pdf->Cell(25, 7, pdf_texto('Precio Venta'), 1, 0, 'R', true);
+            $pdf->Cell(30, 7, pdf_texto('Stock Estancado'), 1, 1, 'C', true);
 
             $pdf->SetFont('Arial', '', 8);
             $pdf->SetTextColor(50, 50, 50);
 
             foreach ($datos as $f) {
-                $pdf->Cell(30, 6, utf8_decode($f['codigo_barras'] ?? '—'), 1, 0, 'C');
-                $pdf->Cell(60, 6, utf8_decode(substr($f['nombre'] ?? '', 0, 36)), 1, 0, 'L');
-                $pdf->Cell(35, 6, utf8_decode(substr($f['categoria'] ?? 'Sin cat.', 0, 20)), 1, 0, 'L');
+                $pdf->Cell(30, 6, pdf_texto($f['codigo_barras'] ?? '—'), 1, 0, 'C');
+                $pdf->Cell(60, 6, pdf_texto(substr($f['nombre'] ?? '', 0, 36)), 1, 0, 'L');
+                $pdf->Cell(35, 6, pdf_texto(substr($f['categoria'] ?? 'Sin cat.', 0, 20)), 1, 0, 'L');
                 $pdf->Cell(25, 6, '$' . number_format((float)($f['precio_venta'] ?? 0), 2), 1, 0, 'R');
                 $pdf->Cell(30, 6, $f['cantidad_stock'] ?? 0, 1, 1, 'C');
             }
         }
 
         $nombreArchivo = 'informe_' . $tipo . '_' . date('Ymd_His') . '.pdf';
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
         $pdf->Output('I', $nombreArchivo);
         exit();
     }

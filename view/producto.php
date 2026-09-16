@@ -107,7 +107,7 @@ require __DIR__ . '/partials/head.php';
         <div style="background:#fff3e0; color:#e65100; padding:12px 16px; border-radius:12px; margin-bottom:18px; border-left: 4px solid #f57c00; font-size:14px; display:flex; align-items:center; gap:10px;">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <div>
-                <strong>Aviso de Reabastecimiento (RF 3.5):</strong> Hay <strong><?= $alertaBajoStockTotal ?></strong> producto(s) activo(s) con stock igual o inferior a su stock mínimo configurado.
+                <strong>Aviso de Reabastecimiento:</strong> Hay <strong><?= $alertaBajoStockTotal ?></strong> producto(s) activo(s) con stock igual o inferior a su stock mínimo configurado.
             </div>
         </div>
     <?php endif; ?>
