@@ -75,6 +75,25 @@ require __DIR__ . '/partials/head.php';
             justify-content: center;
         }
     }
+
+    /* Acciones de la tabla de inventario: agrupadas y compactas */
+    .tabla-inventario .acciones-producto {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .tabla-inventario .btn-action-edit,
+    .tabla-inventario .btn-action-cancel {
+        padding: 5px 9px !important;
+        border-radius: 7px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        gap: 4px !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+    }
 </style>
 
 <div>
@@ -258,19 +277,21 @@ require __DIR__ . '/partials/head.php';
                                     </span>
                                 </td>
                                 <td style="text-align: center; white-space: nowrap;">
-                                    <!-- Editar datos (RF 3.2) -->
-                                    <button type="button" class="btn-action-edit" onclick="abrirModalEditar(<?= htmlspecialchars(json_encode($p)) ?>)">
-                                        <i class="fa-solid fa-pen-to-square"></i> Modificar
-                                    </button>
-                                    
-                                    <!-- RF 3.3: Descontinuar / Eliminación Lógica -->
-                                    <?php if ($p['estado'] === 'activo'): ?>
-                                        <a href="/Proyecto-TeMa/index.php?action=descontinuar_producto&id=<?= $p['id_producto'] ?>" 
-                                            class="btn-action-cancel" 
-                                            onclick="return confirm('¿Está seguro de descontinuar este producto?')">
-                                            <i class="fa-solid fa-ban"></i> Descontinuar
-                                        </a>
-                                    <?php endif; ?>
+                                    <div class="acciones-producto">
+                                        <!-- Editar datos (RF 3.2) -->
+                                        <button type="button" class="btn-action-edit" onclick="abrirModalEditar(<?= htmlspecialchars(json_encode($p)) ?>)">
+                                            <i class="fa-solid fa-pen-to-square"></i> Modificar
+                                        </button>
+
+                                        <!-- RF 3.3: Descontinuar / Eliminación Lógica -->
+                                        <?php if ($p['estado'] === 'activo'): ?>
+                                            <a href="/Proyecto-TeMa/index.php?action=descontinuar_producto&id=<?= $p['id_producto'] ?>" 
+                                                class="btn-action-cancel" 
+                                                onclick="return confirm('¿Está seguro de descontinuar este producto?')">
+                                                <i class="fa-solid fa-ban"></i> Descontinuar
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
