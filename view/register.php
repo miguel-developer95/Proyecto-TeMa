@@ -23,6 +23,22 @@ if (isset($_SESSION['user'])) {
     <title>Tentaciones Marlly - Registrarse</title>
     <link rel="stylesheet" href="/Proyecto-TeMa/public/styles/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        html, body {
+            height: 100vh;
+            margin: 0;
+            padding: 10px;
+            overflow-y: hidden;
+            box-sizing: border-box;
+        }
+        @media (max-height: 560px) {
+            html, body {
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -40,40 +56,42 @@ if (isset($_SESSION['user'])) {
             <!-- Alertas dinámicas -->
             <?php if (isset($_GET['error']) && $_GET['error'] === 'user_exists'): ?>
                 <p
-                    style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    style="color: #c62828; background-color: #ffebee; padding: 8px; border-radius: 5px; font-size: 13px; text-align: center; margin-bottom: 8px;">
                     El nombre de usuario, correo o documento ya existe. Por favor verifica.
                 </p>
             <?php endif; ?>
 
             <?php if (isset($_GET['error']) && $_GET['error'] === 'short_password'): ?>
                 <p
-                    style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    style="color: #c62828; background-color: #ffebee; padding: 8px; border-radius: 5px; font-size: 13px; text-align: center; margin-bottom: 8px;">
                     La contraseña debe tener al menos 8 caracteres.
                 </p>
             <?php endif; ?>
 
             <?php if (isset($_GET['error']) && $_GET['error'] === 'password_mismatch'): ?>
                 <p
-                    style="color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
+                    style="color: #c62828; background-color: #ffebee; padding: 8px; border-radius: 5px; font-size: 13px; text-align: center; margin-bottom: 8px;">
                     Las contraseñas no coinciden. Por favor verifica.
                 </p>
             <?php endif; ?>
 
-            <p id="clientError" style="display:none; color: #c62828; background-color: #ffebee; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center; margin-bottom: 15px;"></p>
+            <p id="clientError" style="display:none; color: #c62828; background-color: #ffebee; padding: 8px; border-radius: 5px; font-size: 13px; text-align: center; margin-bottom: 8px;"></p>
 
             <!-- Formulario configurado hacia el controlador -->
             <form id="registerForm" action="/Proyecto-TeMa/index.php" method="POST">
                 <input type="hidden" name="action" value="register">
                 <?= csrf_field() ?>
 
-                <div class="input-group">
-                    <i class="fa-solid fa-user"></i>
-                    <input type="text" name="nombre" placeholder="Nombre" required>
-                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="input-group">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" name="nombre" placeholder="Nombre" required>
+                    </div>
 
-                <div class="input-group">
-                    <i class="fa-solid fa-user"></i>
-                    <input type="text" name="apellido" placeholder="Apellido" required>
+                    <div class="input-group">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" name="apellido" placeholder="Apellido" required>
+                    </div>
                 </div>
 
                 <div class="input-group1"> 
@@ -109,7 +127,7 @@ if (isset($_SESSION['user'])) {
                 <button type="submit">Registrarme</button>
             </form>
 
-            <p class="register-link" style="margin-top: 20px; font-size: 14px; color: #888;">
+            <p class="register-link" style="margin-top: 10px; font-size: 13px; color: #888;">
                 ¿Ya tienes una cuenta? <a href="/Proyecto-TeMa/view/login.php"
                     style="color: #e63c82; text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
             </p>
