@@ -16,8 +16,12 @@ class HistorialModificacion
     /**
      * Registra un cambio en el historial (RI 4.4 — trazabilidad de modificaciones).
      */
-    public function registrarCambio(string $tipo_accion, string $detalle_cambio, ?int $id_usuario = null): bool
+    public function registrarCambio(string $tipo_accion, string $detalle_cambio, int|string|null $id_usuario = null): bool
     {
+        // $_SESSION['user']['id'] suele venir como string "1" desde PDO/MySQL,
+        // y con declare(strict_types=1) eso rompe el ?int. Normalizamos aquí.
+        $id_usuario = ($id_usuario === null || $id_usuario === '') ? null : (int) $id_usuario;
+
         $sql = "INSERT INTO {$this->tabla} (fecha_accion, tipo_accion, detalle_cambio, id_usuario)
                 VALUES (NOW(), :tipo_accion, :detalle_cambio, :id_usuario)";
 
@@ -32,8 +36,9 @@ class HistorialModificacion
     /**
      * Alias de registrarCambio usado por controladores de venta/inventario.
      */
-    public function registrar(string $tipo_accion, string $detalle_cambio, ?int $id_usuario = null): bool
+    public function registrar(string $tipo_accion, string $detalle_cambio, int|string|null $id_usuario = null): bool
     {
+        $id_usuario = ($id_usuario === null || $id_usuario === '') ? null : (int) $id_usuario;
         return $this->registrarCambio($tipo_accion, $detalle_cambio, $id_usuario);
     }
 

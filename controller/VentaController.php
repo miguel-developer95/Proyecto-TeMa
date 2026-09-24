@@ -268,7 +268,8 @@ class VentaController
         if ($idVenta > 0) {
             $this->guardarCarrito([]);
             unset($_SESSION['pos_cliente']);
-            $this->historial->registrar('crear_venta', "Venta #$idVenta", current_user()['id'] ?? null);
+            $idUsuarioHistorial = isset(current_user()['id']) && current_user()['id'] !== '' ? (int) current_user()['id'] : null;
+            $this->historial->registrar('crear_venta', "Venta #$idVenta", $idUsuarioHistorial);
             redirect('view/recibo.php?id=' . $idVenta);
         }
         flash('error', 'No se pudo procesar la venta (verifica stock y valor recibido).');
@@ -285,7 +286,8 @@ class VentaController
             redirect('view/pos.php');
         }
         if ($this->ventas->anular($id, $motivo, (int) (current_user()['id'] ?? 0))) {
-            $this->historial->registrar('anular_venta', "Venta #$id: $motivo", current_user()['id'] ?? null);
+            $idUsuarioHistorial = isset(current_user()['id']) && current_user()['id'] !== '' ? (int) current_user()['id'] : null;
+            $this->historial->registrar('anular_venta', "Venta #$id: $motivo", $idUsuarioHistorial);
             flash('success', 'Venta anulada y stock reintegrado.');
         } else {
             flash('error', 'No se pudo anular la venta.');
