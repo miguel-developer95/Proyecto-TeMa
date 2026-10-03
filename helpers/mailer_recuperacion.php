@@ -17,8 +17,8 @@ function enviarCorreoRecuperacion(string $destinatario, string $nombre, string $
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'carantonmarinm@gmail.com';
-        $mail->Password   = 'sukasskutewweghu';
+        $mail->Username   = '';
+        $mail->Password   = 'xxxxxxxxxxx';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
         $mail->CharSet    = 'UTF-8';
