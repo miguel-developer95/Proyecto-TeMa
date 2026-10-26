@@ -12,8 +12,7 @@ verificarRol(['administrador']);
 require_once __DIR__ . '/../model/informes.php';
 $informesModel = new Informes();
 
-// Asegurar datos de muestra si la base de datos no tiene ventas registradas
-$informesModel->asegurarDatosDemostracion();
+// Datos de ventas e informes
 
 // Rango de fechas para informes (por defecto mes en curso)
 $fechaInicio = $_GET['fecha_inicio'] ?? date('Y-m-01');

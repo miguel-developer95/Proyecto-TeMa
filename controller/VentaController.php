@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../helpers/auth_guard.php';
+verificarRol(['vendedor', 'cajero', 'administrador']);
+require_once __DIR__ . '/../helpers/csrf.php';
 require_once __DIR__ . '/../helpers/funciones.php';
 require_once __DIR__ . '/../model/venta.php';
 require_once __DIR__ . '/../model/producto.php';
@@ -23,6 +26,14 @@ class VentaController
         $this->historial = new Historial();
     }
 
+    private function verificarSeguridad(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !csrf_verify()) {
+            flash('error', 'Sesión inválida o petición no autorizada. Intenta de nuevo.');
+            redirect('view/pos.php');
+        }
+    }
+
     /** Compara el estado de un producto sin importar mayúsculas/minúsculas ni espacios. */
     private function estaActivo(array $p): bool
     {
@@ -43,6 +54,8 @@ class VentaController
     /** RF 5.1: agregar por código de barras exacto o por id. */
     public function posAdd(): void
     {
+        $this->verificarSeguridad();
+
         $busqueda = trim((string) post('busqueda'));
         $cant = max(1, (int) post('cantidad'));
         $prod = false;
@@ -77,6 +90,8 @@ class VentaController
 
     public function posSetQty(): void
     {
+        $this->verificarSeguridad();
+
         $id = (int) post('id_producto');
         $cant = (int) post('cantidad');
         $cart = $this->carrito();
@@ -97,6 +112,8 @@ class VentaController
 
     public function posRemove(): void
     {
+        $this->verificarSeguridad();
+
         $cart = $this->carrito();
         unset($cart[(int) post('id_producto')]);
         $this->guardarCarrito($cart);
@@ -105,6 +122,8 @@ class VentaController
 
     public function posClear(): void
     {
+        $this->verificarSeguridad();
+
         $this->guardarCarrito([]);
         redirect('view/pos.php');
     }
@@ -112,6 +131,8 @@ class VentaController
     /** RF 5.4: pausar la venta en curso (múltiple, persistente en BD, máx 10 por usuario). */
     public function posPause(): void
     {
+        $this->verificarSeguridad();
+
         $cart = $this->carrito();
         if (empty($cart)) {
             flash('error', 'No hay venta en curso para pausar.');
@@ -146,6 +167,8 @@ class VentaController
     /** RF 5.4: recuperar una venta pausada por id (o legacy si no hay id). */
     public function posResume(): void
     {
+        $this->verificarSeguridad();
+
         $id = (int) post('id_pausada');
         if (!empty($this->carrito())) {
             flash('error', 'Termina o vacía la venta actual antes de recuperar la pausada.');
@@ -183,6 +206,8 @@ class VentaController
     /** RF 5.4: descartar una pausa sin recuperarla. */
     public function posPausadaDelete(): void
     {
+        $this->verificarSeguridad();
+
         $id = (int) post('id_pausada');
         if ($id > 0) {
             (new VentaPausada())->eliminar($id);
@@ -194,6 +219,8 @@ class VentaController
     /** Cliente rápido desde el POS (nombre + correo opcional). */
     public function clienteRapido(): void
     {
+        $this->verificarSeguridad();
+
         $nombre = trim((string) post('nombre'));
         $correo = trim((string) post('correo'));
         if ($nombre === '') {
@@ -216,6 +243,8 @@ class VentaController
 
     public function posCliente(): void
     {
+        $this->verificarSeguridad();
+
         $_SESSION['pos_cliente'] = post('id_cliente') !== '' ? (int) post('id_cliente') : null;
         redirect('view/pos.php');
     }
@@ -226,6 +255,8 @@ class VentaController
      */
     public function checkout(): void
     {
+        $this->verificarSeguridad();
+
         $cart = $this->carrito();
         if (empty($cart)) {
             flash('error', 'El carrito está vacío.');
@@ -279,6 +310,8 @@ class VentaController
     /** RF 5.5: anular con motivo obligatorio y reintegro de stock. */
     public function anular(): void
     {
+        $this->verificarSeguridad();
+
         $id = (int) post('id_venta');
         $motivo = trim((string) post('motivo'));
         if ($id <= 0 || $motivo === '') {
@@ -290,7 +323,7 @@ class VentaController
             $this->historial->registrar('anular_venta', "Venta #$id: $motivo", $idUsuarioHistorial);
             flash('success', 'Venta anulada y stock reintegrado.');
         } else {
-            flash('error', 'No se pudo anular la venta.');
+            flash('error', 'No se pudo anular la venta (puede que ya se encuentre anulada).');
         }
         redirect('view/pos.php');
     }

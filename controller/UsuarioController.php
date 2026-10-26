@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../config/session_config.php';
 require_once __DIR__ . '/../model/usuario.php';
 
 class UsuarioController {
@@ -14,26 +15,31 @@ class UsuarioController {
             exit();
         }
 
+        $from = $_POST['from'] ?? '';
+
+        // Solo un administrador autenticado puede asignar el rol de Administrador
+        $rolFinal = 'Vendedor';
+        if ($from === 'configuracion' && isset($_SESSION['user']) && strtolower($_SESSION['user']['rol'] ?? '') === 'administrador') {
+            $rolFinal = (strtolower((string)$rol) === 'administrador') ? 'Administrador' : 'Vendedor';
+        }
+
         $usuarioModel = new Usuario();
-        $usernameGenerado = $usuarioModel->registrar($nombre, $apellido, $rol, $password, $email, $documento);
+        $usernameGenerado = $usuarioModel->registrar($nombre, $apellido, $rolFinal, $password, $email, $documento);
 
         if ($usernameGenerado !== false) {
-            $from = $_POST['from'] ?? '';
             if ($from === 'configuracion') {
                 header("Location: /Proyecto-TeMa/view/configuracion.php?status=created&username=" . urlencode($usernameGenerado));
                 exit();
             }
 
-            // Guardar temporalmente en sesión para mostrarlo en la pantalla de confirmación
+            // Guardar solo el username generado (nunca almacenar contraseñas en texto plano en la sesión)
             $_SESSION['registro_exitoso'] = [
                 'username' => $usernameGenerado,
-                'password' => $password, // texto plano SOLO para esta pantalla, nunca se guarda así en BD
             ];
 
             header("Location: /Proyecto-TeMa/view/registro_exitoso.php");
             exit();
         } else {
-            $from = $_POST['from'] ?? '';
             if ($from === 'configuracion') {
                 header("Location: /Proyecto-TeMa/view/configuracion.php?status=user_exists");
                 exit();
@@ -60,8 +66,6 @@ class UsuarioController {
         $user = $usuarioModel->login($username, $password);
 
         if ($user) {
-
-            // AGREGAR AQUÍ: verificar que la cuenta esté activa
             if (($user['estado'] ?? 'activo') !== 'activo') {
                 header("Location: /Proyecto-TeMa/view/login.php?error=inactive");
                 exit();
@@ -72,13 +76,12 @@ class UsuarioController {
 
             session_regenerate_id(true);
             $_SESSION['user'] = $user;
-            $_SESSION['last_activity'] = time(); // iniciar el reloj de inactividad
+            $_SESSION['last_activity'] = time();
             $this->redirigirPorRol($user['rol']);
         } else {
             // 3. Login fallido: registrar intento
             $usuarioModel->registrarIntentoFallido($username);
 
-            // Revisar si este intento fue el que activó el bloqueo (el 3ro)
             $segundosRestantes = $usuarioModel->verificarBloqueo($username);
             if ($segundosRestantes > 0) {
                 header("Location: /Proyecto-TeMa/view/login.php?error=locked&segundos=$segundosRestantes");
@@ -97,8 +100,6 @@ class UsuarioController {
                 header("Location: /Proyecto-TeMa/view/pos.php");
                 break;
             case 'administrador':
-                header("Location: /Proyecto-TeMa/view/dashboard.php");
-                break;
             default:
                 header("Location: /Proyecto-TeMa/view/dashboard.php");
         }
@@ -124,15 +125,20 @@ class UsuarioController {
     }
 
     public function solicitarRecuperacion($email) {
-        require_once __DIR__ . '/../helpers/mailer_recuperacion.php'; // <-- cambio aquí
+        require_once __DIR__ . '/../helpers/mailer_recuperacion.php';
 
         $usuarioModel = new Usuario();
         $datos = $usuarioModel->generarTokenRecuperacion($email);
 
         if ($datos) {
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $link = "{$protocol}{$host}/Proyecto-TeMa/view/recuperar_contra.php?token=" . $datos['token'];
+            $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            // Sanear host contra Host Header Injection
+            $host = preg_replace('/[^a-zA-Z0-9\.\-\:]/', '', $rawHost);
+            if (empty($host) || str_contains($host, '@')) {
+                $host = $_SERVER['SERVER_NAME'] ?? 'localhost';
+            }
+            $link = "{$protocol}{$host}/Proyecto-TeMa/view/recuperar_contra.php?token=" . urlencode($datos['token']);
             enviarCorreoRecuperacion($datos['email'], $datos['nombre'], $link);
         }
 
@@ -165,8 +171,14 @@ class UsuarioController {
     }
 
     public function eliminar($id) {
+        $idActual = (int)($_SESSION['user']['id'] ?? $_SESSION['user']['id_usuario'] ?? 0);
+        if ($idActual === (int)$id) {
+            header("Location: /Proyecto-TeMa/view/configuracion.php?error=cannot_delete_self");
+            exit();
+        }
+
         $usuarioModel = new Usuario();
-        if ($usuarioModel->eliminar($id)) {
+        if ($usuarioModel->eliminar((int)$id)) {
             header("Location: /Proyecto-TeMa/view/configuracion.php?status=deleted");
         } else {
             header("Location: /Proyecto-TeMa/view/configuracion.php?error=delete_failed");
@@ -186,10 +198,16 @@ class UsuarioController {
     }
 
     public function cambiarEstado($id) {
-    $usuarioModel = new Usuario();
-    $usuarioModel->cambiarEstado((int)$id);
-    header("Location: /Proyecto-TeMa/view/configuracion.php?status=estado_actualizado");
-    exit();
-}
+        $idActual = (int)($_SESSION['user']['id'] ?? $_SESSION['user']['id_usuario'] ?? 0);
+        if ($idActual === (int)$id) {
+            header("Location: /Proyecto-TeMa/view/configuracion.php?error=cannot_deactivate_self");
+            exit();
+        }
+
+        $usuarioModel = new Usuario();
+        $usuarioModel->cambiarEstado((int)$id);
+        header("Location: /Proyecto-TeMa/view/configuracion.php?status=estado_actualizado");
+        exit();
+    }
 }
 ?>

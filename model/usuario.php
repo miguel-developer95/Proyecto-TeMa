@@ -123,7 +123,7 @@ class Usuario
 
         if ($row && $row['intentos_fallidos'] >= 3) {
             $sql3 = "UPDATE usuarios 
-                    SET bloqueado_hasta = DATE_ADD(NOW(), INTERVAL 1 MINUTE) 
+                    SET bloqueado_hasta = DATE_ADD(NOW(), INTERVAL 15 MINUTE) 
                     WHERE (username = :username OR email = :username) AND estado = 'activo'";
 
             $stmt3 = $this->db->prepare($sql3);

@@ -285,11 +285,14 @@ require __DIR__ . '/partials/head.php';
 
                                         <!-- RF 3.3: Descontinuar / Eliminación Lógica -->
                                         <?php if ($p['estado'] === 'activo'): ?>
-                                            <a href="/Proyecto-TeMa/index.php?action=descontinuar_producto&id=<?= $p['id_producto'] ?>" 
-                                                class="btn-action-cancel" 
-                                                onclick="return confirm('¿Está seguro de descontinuar este producto?')">
-                                                <i class="fa-solid fa-ban"></i> Descontinuar
-                                            </a>
+                                            <form action="/Proyecto-TeMa/index.php" method="POST" style="display:inline;" onsubmit="return confirm('¿Está seguro de descontinuar este producto?');">
+                                                <input type="hidden" name="action" value="descontinuar_producto">
+                                                <input type="hidden" name="id" value="<?= (int)$p['id_producto'] ?>">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn-action-cancel" style="border:none; cursor:pointer;">
+                                                    <i class="fa-solid fa-ban"></i> Descontinuar
+                                                </button>
+                                            </form>
                                         <?php endif; ?>
                                     </div>
                                 </td>

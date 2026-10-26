@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../helpers/auth_guard.php';
+verificarRol(['administrador', 'vendedor', 'cajero']);
 
 require_once __DIR__ . '/../config/connection.php';
 require_once __DIR__ . '/../model/venta.php';
@@ -15,6 +16,20 @@ $recibo = $idVenta > 0 ? $ventaModel->generarRecibo($idVenta) : ['venta' => fals
 
 $venta = $recibo['venta'] ?? false;
 $detalle = $recibo['detalle'] ?? [];
+
+// Control de acceso para mitigar IDOR: usuarios no administradores solo pueden consultar ventas de hoy o propias
+$rolActual = strtolower($_SESSION['user']['rol'] ?? '');
+if ($venta && $rolActual !== 'administrador') {
+    $idUsuarioSesion = (int)($_SESSION['user']['id'] ?? $_SESSION['user']['id_usuario'] ?? 0);
+    $fechaVenta = substr((string)($venta['fecha'] ?? ''), 0, 10);
+    $esHoy = ($fechaVenta === date('Y-m-d'));
+    $esSuVenta = ((int)($venta['id_usuario'] ?? 0) === $idUsuarioSesion);
+
+    if (!$esHoy && !$esSuVenta) {
+        $venta = false;
+        $detalle = [];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">

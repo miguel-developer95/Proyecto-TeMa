@@ -4,13 +4,10 @@ require_once __DIR__ . '/../model/compra.php';
 require_once __DIR__ . '/../model/detalle_compra.php';
 require_once __DIR__ . '/../model/proveedores.php';
 require_once __DIR__ . '/../model/historial_modificacion.php';
+require_once __DIR__ . '/../config/connection.php';
 
 /**
  * Controlador del módulo de Compras (RF 4.1 - RF 4.4).
- *
- * Asume que hay una sesión activa con $_SESSION['user']['id_usuario']
- * (mismo patrón usado en dashboard.php, donde $_SESSION['user'] guarda
- * username y rol). Ajustar la clave si tu tabla `usuarios` la llama distinto.
  */
 class CompraController
 {
@@ -18,6 +15,7 @@ class CompraController
     private DetalleCompra $detalleModel;
     private Proveedores $proveedorModel;
     private HistorialModificacion $historialModel;
+    private PDO $db;
 
     public function __construct()
     {
@@ -25,17 +23,11 @@ class CompraController
         $this->detalleModel = new DetalleCompra();
         $this->proveedorModel = new Proveedores();
         $this->historialModel = new HistorialModificacion();
+        $this->db = (new Connection())->conn;
     }
 
     /**
      * RF 4.1 — Registra una compra completa: cabecera + líneas de detalle.
-     *
-     * @param array $datos [
-     *   'id_proveedor' => int,
-     *   'metodo_pago' => string,
-     *   'items' => [ ['codigo_barras' => ..., 'cantidad_producto' => ..., 'precio_unitario' => ...], ... ]
-     * ]
-     * @return array ['success' => bool, 'id_compra' => int|null, 'error' => string|null]
      */
     public function registrarCompra(array $datos): array
     {
@@ -62,7 +54,6 @@ class CompraController
         $id_compra = $this->compraModel->id_compra;
 
         if (!$this->detalleModel->agregarDetalles($id_compra, $datos['items'])) {
-            // La cabecera ya se creó; se deja registrado el fallo parcial para revisión manual.
             return ['success' => false, 'id_compra' => $id_compra, 'error' => 'La compra se creó pero falló el registro de sus productos.'];
         }
 
@@ -109,10 +100,7 @@ class CompraController
     }
 
     /**
-     * RF 4.4 — Modifica una compra existente y deja registro en el
-     * historial de trazabilidad (RI 4.4).
-     *
-     * @param array $datosNuevos ['metodo_pago' => ..., 'estado' => ..., 'total_compra' => ..., 'id_proveedor' => ...]
+     * RF 4.4 — Modifica una compra existente y deja registro en el historial.
      */
     public function modificarCompra(int $id_compra, array $datosNuevos, int $id_usuario): array
     {
@@ -133,7 +121,6 @@ class CompraController
             return ['success' => false, 'error' => 'No se pudo actualizar la compra.'];
         }
 
-        // Detecta y registra en el historial únicamente los campos que realmente cambiaron.
         $cambios = [];
         foreach (['metodo_pago', 'estado', 'total_compra', 'id_proveedor'] as $campo) {
             if (isset($datosNuevos[$campo]) && $datosNuevos[$campo] != $compraActual[$campo]) {
@@ -149,7 +136,7 @@ class CompraController
     }
 
     /**
-     * Anula una compra (cambia estado, no la borra) — mantiene el historial intacto.
+     * Anula una compra, revierte el stock ingresado y mantiene la trazabilidad.
      */
     public function anularCompra(int $id_compra, int $id_usuario): array
     {
@@ -158,16 +145,48 @@ class CompraController
             return ['success' => false, 'error' => 'La compra no existe.'];
         }
 
-        if (!$this->compraModel->actualizarEstado($id_compra, 'anulada')) {
-            return ['success' => false, 'error' => 'No se pudo anular la compra.'];
+        if (strtolower(trim((string)$compraActual['estado'])) === 'anulada') {
+            return ['success' => false, 'error' => 'La compra ya se encuentra anulada.'];
         }
 
-        $this->historialModel->registrarCambioCompra(
-            $id_compra,
-            ['estado' => ['antes' => $compraActual['estado'], 'despues' => 'anulada']],
-            $id_usuario
-        );
+        try {
+            $this->db->beginTransaction();
 
-        return ['success' => true, 'error' => null];
+            if (!$this->compraModel->actualizarEstado($id_compra, 'anulada')) {
+                $this->db->rollBack();
+                return ['success' => false, 'error' => 'No se pudo anular la compra.'];
+            }
+
+            // Revertir el stock que fue agregado por esta compra
+            $detalles = $this->detalleModel->obtenerPorCompra($id_compra);
+            $stmtRevert = $this->db->prepare(
+                "UPDATE productos SET cantidad_stock = GREATEST(0, cantidad_stock - :cant) WHERE id_producto = :id_prod"
+            );
+
+            foreach ($detalles as $d) {
+                $cant = (int) ($d['cantidad'] ?? $d['cantidad_producto'] ?? 0);
+                $idProd = (int) ($d['id_producto'] ?? 0);
+                if ($cant > 0 && $idProd > 0) {
+                    $stmtRevert->execute([
+                        ':cant'    => $cant,
+                        ':id_prod' => $idProd
+                    ]);
+                }
+            }
+
+            $this->historialModel->registrarCambioCompra(
+                $id_compra,
+                ['estado' => ['antes' => $compraActual['estado'], 'despues' => 'anulada']],
+                $id_usuario
+            );
+
+            $this->db->commit();
+            return ['success' => true, 'error' => null];
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return ['success' => false, 'error' => 'Error al revertir stock: ' . $e->getMessage()];
+        }
     }
 }

@@ -130,7 +130,7 @@ if (isset($_SESSION['user'])) {
                     <i class="fa-solid fa-id-badge"></i>
                     <select name="rol" required>
                         <option value="">Selecciona un rol</option>
-                        <option value="Administrador">Administrador</option>
+                        <option value="Vendedor" selected>Vendedor</option>
                     </select>
                 </div>
 

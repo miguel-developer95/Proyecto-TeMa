@@ -1,0 +1,13 @@
+# Desactivar listado de directorios
+Options -Indexes
+
+# Proteger archivos de configuración, dotfiles y respaldos
+<FilesMatch "^\.|\.(json|lock|env|ini|log|sh|sql|bak)$">
+    Require all denied
+</FilesMatch>
+
+# Bloquear acceso directo a directorios internos
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(config|model|helpers|libs)/ - [F,L,NC]
+</IfModule>

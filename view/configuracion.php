@@ -131,12 +131,9 @@ require __DIR__ . '/partials/head.php';
         font-weight: 600 !important;
         line-height: 1.3 !important;
         cursor: pointer !important;
+        font-family: inherit;
     }
 
-    /* No usar "all: revert" aquí: resetea también font-family y rompe
-       el ícono de Font Awesome (queda como un cuadrito/tofu). Solo
-       normalizamos posición/tamaño y dejamos que .fa-solid siga
-       controlando la fuente y el glifo del ícono. */
     .crud-card .action-btn i {
         display: inline-block !important;
         flex-shrink: 0 !important;
@@ -193,6 +190,14 @@ require __DIR__ . '/partials/head.php';
         <?php elseif (isset($_GET['status']) && $_GET['status'] === 'estado_actualizado'): ?>
             <div style="background:#e8f5e9; color:#2e7d32; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
                 <i class="fa-solid fa-circle-check"></i> Estado del usuario actualizado correctamente.
+            </div>
+        <?php elseif (isset($_GET['error']) && $_GET['error'] === 'cannot_delete_self'): ?>
+            <div style="background:#ffebee; color:#c62828; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Acción no permitida: no puedes eliminar tu propia cuenta en sesión.
+            </div>
+        <?php elseif (isset($_GET['error']) && $_GET['error'] === 'cannot_deactivate_self'): ?>
+            <div style="background:#ffebee; color:#c62828; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Acción no permitida: no puedes desactivar tu propia cuenta en sesión.
             </div>
         <?php endif; ?>
 
@@ -299,27 +304,33 @@ require __DIR__ . '/partials/head.php';
                                 <td><?php echo htmlspecialchars($u['documento'] ?? $u['No.Documento'] ?? 'N/A'); ?></td>
                                 <td><?php echo htmlspecialchars($u['rol'] ?? 'N/A'); ?></td>
                                 <td>
-                                    <?php if (($u['estado'] ?? '') === 'activo'): ?>
-                                        <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
-                                        onclick="return confirm('¿Desactivar a este usuario? No podrá iniciar sesión mientras esté inactivo.');"
-                                        class="action-btn btn-deactivate">
-                                            <i class="fa-solid fa-user-slash"></i> Desactivar
-                                        </a>
-                                    <?php else: ?>
-                                        <a href="/Proyecto-TeMa/index.php?action=toggle_estado&id=<?php echo $u['id']; ?>"
-                                        onclick="return confirm('¿Activar a este usuario? Podrá volver a iniciar sesión.');"
-                                        class="action-btn btn-activate">
-                                            <i class="fa-solid fa-user-check"></i> Activar
-                                        </a>
-                                    <?php endif; ?>
+                                    <form action="/Proyecto-TeMa/index.php" method="POST" style="display:inline;" onsubmit="return confirm('<?= ($u['estado'] ?? '') === 'activo' ? '¿Desactivar a este usuario? No podrá iniciar sesión mientras esté inactivo.' : '¿Activar a este usuario? Podrá volver a iniciar sesión.' ?>');">
+                                        <input type="hidden" name="action" value="toggle_estado">
+                                        <input type="hidden" name="id" value="<?php echo (int)$u['id']; ?>">
+                                        <?= csrf_field() ?>
+                                        <?php if (($u['estado'] ?? '') === 'activo'): ?>
+                                            <button type="submit" class="action-btn btn-deactivate" style="border:none; cursor:pointer;">
+                                                <i class="fa-solid fa-user-slash"></i> Desactivar
+                                            </button>
+                                        <?php else: ?>
+                                            <button type="submit" class="action-btn btn-activate" style="border:none; cursor:pointer;">
+                                                <i class="fa-solid fa-user-check"></i> Activar
+                                            </button>
+                                        <?php endif; ?>
+                                    </form>
                                 </td>
                                 <td>
                                     <a href="/Proyecto-TeMa/view/configuracion.php?edit_id=<?php echo $u['id']; ?>&edit_username=<?php echo urlencode($u['username']); ?>&edit_email=<?php echo urlencode($u['email'] ?? $u['correo_electronico'] ?? ''); ?>&edit_documento=<?php echo urlencode($u['documento'] ?? $u['No.Documento'] ?? ''); ?>&edit_rol=<?php echo urlencode($u['rol'] ?? ''); ?>" class="action-btn btn-edit">
                                         <i class="fa-solid fa-pen"></i> Editar
                                     </a>
-                                    <a href="/Proyecto-TeMa/index.php?action=delete_user&id=<?php echo $u['id']; ?>" onclick="return confirm('¿Seguro que deseas desactivar (eliminación lógica) a este usuario?');" class="action-btn btn-delete">
-                                        <i class="fa-solid fa-trash"></i> Eliminar
-                                    </a>
+                                    <form action="/Proyecto-TeMa/index.php" method="POST" style="display:inline;" onsubmit="return confirm('¿Seguro que deseas desactivar (eliminación lógica) a este usuario?');">
+                                        <input type="hidden" name="action" value="delete_user">
+                                        <input type="hidden" name="id" value="<?php echo (int)$u['id']; ?>">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="action-btn btn-delete" style="border:none; cursor:pointer;">
+                                            <i class="fa-solid fa-trash"></i> Eliminar
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

@@ -1,12 +1,12 @@
 <?php
+// Configuración centralizada de inactividad y cookies de sesión
+require_once __DIR__ . '/../config/session_config.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Configuración centralizada de inactividad
-require_once __DIR__ . '/../config/session_config.php';
-
-// 1. Verificar autenticación (tu lógica actual)
+// 1. Verificar autenticación
 if (!isset($_SESSION['user'])) {
     header('Location: /Proyecto-TeMa/view/login.php');
     exit;

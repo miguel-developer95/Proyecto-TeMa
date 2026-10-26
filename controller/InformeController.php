@@ -115,6 +115,15 @@ class InformeController
         }
     }
 
+    private function sanitizarCSV($valor): string
+    {
+        $str = (string) $valor;
+        if ($str !== '' && in_array($str[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'" . $str;
+        }
+        return $str;
+    }
+
     public function exportarCSV(string $tipo, string $inicio, string $fin): void
     {
         $info = $this->obtenerDatos($tipo, $inicio, $fin);
@@ -133,9 +142,9 @@ class InformeController
             fputcsv($out, ['Codigo', 'Producto', 'Categoria', 'Unidades Vendidas', 'Total Ingresos ($)', 'Costo Total ($)', 'Ganancia Real ($)'], ';');
             foreach ($datos as $fila) {
                 fputcsv($out, [
-                    $fila['codigo_barras'] ?? '',
-                    $fila['nombre'] ?? '',
-                    $fila['categoria'] ?? 'Sin categoría',
+                    $this->sanitizarCSV($fila['codigo_barras'] ?? ''),
+                    $this->sanitizarCSV($fila['nombre'] ?? ''),
+                    $this->sanitizarCSV($fila['categoria'] ?? 'Sin categoría'),
                     $fila['cantidad_vendida'] ?? 0,
                     number_format((float)($fila['total_ingresos'] ?? 0), 2, '.', ''),
                     number_format((float)($fila['total_costo'] ?? 0), 2, '.', ''),
@@ -146,7 +155,7 @@ class InformeController
             fputcsv($out, ['Categoria', 'Variedad Productos', 'Unidades Vendidas', 'Total Ingresos ($)', 'Costo Total ($)', 'Ganancia Real ($)'], ';');
             foreach ($datos as $fila) {
                 fputcsv($out, [
-                    $fila['categoria'] ?? 'Sin categoría',
+                    $this->sanitizarCSV($fila['categoria'] ?? 'Sin categoría'),
                     $fila['productos_distintos'] ?? 0,
                     $fila['cantidad_vendida'] ?? 0,
                     number_format((float)($fila['total_ingresos'] ?? 0), 2, '.', ''),
@@ -159,9 +168,9 @@ class InformeController
             foreach ($datos as $i => $fila) {
                 fputcsv($out, [
                     'Top ' . ($i + 1),
-                    $fila['codigo_barras'] ?? '',
-                    $fila['nombre'] ?? '',
-                    $fila['categoria'] ?? 'Sin categoría',
+                    $this->sanitizarCSV($fila['codigo_barras'] ?? ''),
+                    $this->sanitizarCSV($fila['nombre'] ?? ''),
+                    $this->sanitizarCSV($fila['categoria'] ?? 'Sin categoría'),
                     $fila['cantidad_stock'] ?? 0,
                     $fila['unidades_vendidas'] ?? 0,
                     number_format((float)($fila['total_recaudado'] ?? 0), 2, '.', '')
@@ -171,12 +180,12 @@ class InformeController
             fputcsv($out, ['Codigo', 'Producto', 'Categoria', 'Precio Venta ($)', 'Stock Estancado', 'Estado Rotacion'], ';');
             foreach ($datos as $fila) {
                 fputcsv($out, [
-                    $fila['codigo_barras'] ?? '',
-                    $fila['nombre'] ?? '',
-                    $fila['categoria'] ?? 'Sin categoría',
+                    $this->sanitizarCSV($fila['codigo_barras'] ?? ''),
+                    $this->sanitizarCSV($fila['nombre'] ?? ''),
+                    $this->sanitizarCSV($fila['categoria'] ?? 'Sin categoría'),
                     number_format((float)($fila['precio_venta'] ?? 0), 2, '.', ''),
                     $fila['cantidad_stock'] ?? 0,
-                    $fila['estado_rotacion'] ?? 'Sin ventas'
+                    $this->sanitizarCSV($fila['estado_rotacion'] ?? 'Sin ventas')
                 ], ';');
             }
         }

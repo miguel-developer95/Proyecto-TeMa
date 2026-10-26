@@ -11,9 +11,7 @@ if (!isset($_SESSION['registro_exitoso'])) {
 
 $datos = $_SESSION['registro_exitoso'];
 
-// Limpiar la sesión INMEDIATAMENTE después de leerla, para que
-// un refresh (F5) o el botón "atrás" del navegador no vuelvan a mostrar
-// la contraseña ni permitan re-acceder a esta pantalla
+// Limpiar la sesión INMEDIATAMENTE después de leerla
 unset($_SESSION['registro_exitoso']);
 ?>
 <!DOCTYPE html>
@@ -27,20 +25,20 @@ unset($_SESSION['registro_exitoso']);
     <div class="card">
         <img src="/Proyecto-TeMa/public/logo.png" alt="Logo Tentaciones Marlly" class="shop-logo">
         <h2>¡Cuenta creada con éxito!</h2>
-        <p>Guarda estos datos, los necesitarás para iniciar sesión:</p>
+        <p>Tu cuenta ha sido registrada en el sistema. Guarda tu nombre de usuario para iniciar sesión:</p>
 
         <div class="credencial">
-            <strong>Usuario</strong>
-            <?= htmlspecialchars($datos['username']) ?>
+            <strong>Usuario Asignado</strong>
+            <?= htmlspecialchars($datos['username'] ?? '') ?>
         </div>
 
         <div class="credencial">
             <strong>Contraseña</strong>
-            <?= htmlspecialchars($datos['password']) ?>
+            <span style="color: #666; font-size: 13px;">La contraseña configurada durante tu registro</span>
         </div>
 
         <form action="/Proyecto-TeMa/view/login.php" method="get">
-            <button type="submit">Continuar</button>
+            <button type="submit">Iniciar Sesión</button>
         </form>
     </div>
 </body>

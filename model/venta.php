@@ -89,7 +89,7 @@ class Venta
      */
     public function obtenerTodas(int $limite = 20): array
     {
-        $query = "SELECT v.id_venta, v.fecha, v.empresa, v.total, v.valor_recibido, v.cambio,
+        $query = "SELECT v.id_venta, v.fecha, v.id_usuario, v.empresa, v.total, v.valor_recibido, v.cambio,
                          v.pagado, v.estado, v.numero_recibo, c.nombre AS cliente,
                          mp.nombre_metodo, mp.empresa AS metodo_empresa
                   FROM ventas v
@@ -116,19 +116,37 @@ class Venta
     }
 
     /**
-     * Anula una venta y reintegra el stock.
+     * Anula una venta y reintegra el stock asegurando idempotencia (no duplicación).
      */
     public function cancelar(int $id, string $motivo): bool
     {
         try {
             $this->db->beginTransaction();
 
-            $query = "UPDATE ventas SET estado = 'anulada', motivo_anulacion = :motivo WHERE id_venta = :id_venta";
+            // 1. Verificar estado actual (prevenir re-anulación y multiplicación de stock)
+            $stmtCheck = $this->db->prepare("SELECT estado FROM ventas WHERE id_venta = :id_venta FOR UPDATE");
+            $stmtCheck->bindParam(':id_venta', $id, PDO::PARAM_INT);
+            $stmtCheck->execute();
+            $ventaActual = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ventaActual || strtolower(trim((string)$ventaActual['estado'])) === 'anulada') {
+                $this->db->rollBack();
+                return false;
+            }
+
+            // 2. Actualizar estado a 'anulada'
+            $query = "UPDATE ventas SET estado = 'anulada', motivo_anulacion = :motivo WHERE id_venta = :id_venta AND estado != 'anulada'";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':motivo', $motivo);
             $stmt->bindParam(':id_venta', $id, PDO::PARAM_INT);
             $stmt->execute();
 
+            if ($stmt->rowCount() === 0) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            // 3. Reintegrar stock y registrar historial
             $queryDetalle = "SELECT id_producto, cantidad FROM detalle_ventas WHERE id_venta = :id_venta";
             $stmtDetalle = $this->db->prepare($queryDetalle);
             $stmtDetalle->bindParam(':id_venta', $id, PDO::PARAM_INT);
@@ -166,7 +184,7 @@ class Venta
      */
     public function generarRecibo(int $idVenta): array
     {
-        $query = "SELECT v.id_venta, v.fecha, v.empresa, v.total, v.valor_recibido, v.cambio,
+        $query = "SELECT v.id_venta, v.fecha, v.id_usuario, v.empresa, v.total, v.valor_recibido, v.cambio,
                          v.pagado, v.numero_recibo, v.estado, c.nombre AS cliente, c.correo_electronico,
                          c.telefono AS cliente_telefono, c.documento AS cliente_documento,
                          m.nombre_metodo, u.nombre AS cajero_nombre, u.username AS cajero_usuario
